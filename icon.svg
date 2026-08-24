@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="112" fill="#0f766e"/>
+  <g>
+    <rect x="80" y="68" width="248" height="168" rx="36" fill="#ffffff"/>
+    <polygon points="128,232 128,292 184,232" fill="#ffffff"/>
+    <rect x="196" y="252" width="236" height="152" rx="36" fill="#a7d8d2"/>
+    <polygon points="384,400 384,454 334,400" fill="#a7d8d2"/>
+  </g>
+  <g fill="#0f766e" font-family="Hiragino Sans,Helvetica,Arial,sans-serif" font-weight="700" text-anchor="middle">
+    <text x="204" y="196" font-size="128">あ</text>
+    <text x="314" y="368" font-size="112" font-family="Helvetica,Arial,sans-serif">A</text>
+  </g>
+</svg>
