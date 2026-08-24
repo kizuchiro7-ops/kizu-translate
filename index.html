@@ -145,6 +145,15 @@ nav button[aria-pressed="true"]{color:var(--brand)}
 .mic{width:46px;height:46px;border-radius:50%;background:var(--bg);border:1px solid var(--line);display:grid;place-items:center;font-size:19px;flex:0 0 auto}
 .mic.rec{background:var(--danger);color:#fff;border-color:var(--danger);animation:pulse 1.2s infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.55}}
+.setrow{display:flex;align-items:center;gap:9px;margin-bottom:11px}
+.setrow>.sk{flex:0 0 66px;font-size:12.5px;font-weight:700;color:var(--ink-2)}
+.setrow select{flex:1;min-width:0;padding:10px 9px;border-radius:10px;border:1px solid var(--line);
+  background:var(--card);font-size:14px;color:var(--ink);appearance:none;
+  background-image:linear-gradient(45deg,transparent 50%,var(--ink-2) 50%),linear-gradient(135deg,var(--ink-2) 50%,transparent 50%);
+  background-position:calc(100% - 15px) 18px,calc(100% - 10px) 18px;background-size:5px 5px;background-repeat:no-repeat;padding-right:28px}
+.setrow input[type=range]{flex:1;min-width:0;accent-color:var(--brand)}
+.setrow .play{flex:0 0 auto;padding:10px 13px;border-radius:10px;background:var(--brand-soft);color:var(--brand);font-weight:700;font-size:13px}
+.setrow .val{flex:0 0 42px;text-align:right;font-size:13px;font-weight:700;color:var(--brand);font-variant-numeric:tabular-nums}
 .togglerow{display:flex;align-items:center;gap:10px;margin-top:10px;padding-top:10px;border-top:1px solid var(--line)}
 .togglerow .tl{flex:1;font-size:13px;font-weight:600;color:var(--ink-2);line-height:1.4}
 .switch{flex:0 0 auto;width:52px;height:31px;border-radius:999px;background:var(--line);position:relative;transition:.18s}
@@ -281,7 +290,7 @@ const STAFF_CATS = [
     {ja:"お着替えをお貸しできます。", en:"We can lend you a change of clothes."},
     {ja:"上着とアクセサリーを外していただけますか。", en:"Could you remove your jacket and any jewellery?"},
     {ja:"院内では携帯電話をマナーモードにしてください。", en:"Please set your phone to silent while you're in the clinic."},
-    {ja:"Wi‑Fiをお使いになれます。パスワードはこちらです。", en:"You're welcome to use our Wi‑Fi. Here's the password."}
+    {ja:"Wi-Fiをお使いになれます。パスワードはこちらです。", en:"You're welcome to use our Wi-Fi. Here's the password."}
   ]}
 ]},
 
@@ -325,7 +334,7 @@ const STAFF_CATS = [
     {ja:"骨粗しょう症と言われたことはありますか？", en:"Have you ever been told you have osteoporosis?"},
     {ja:"骨折や手術を受けたことはありますか？", en:"Have you ever had a fracture or any surgery?"},
     {ja:"現在、病院にかかっていますか？", en:"Are you currently under a doctor's care?"},
-    {ja:"レントゲンやMRIを撮ったことはありますか？ 結果をお持ちですか？", en:"Have you had an X‑ray or MRI? Do you have the results with you?"},
+    {ja:"レントゲンやMRIを撮ったことはありますか？ 結果をお持ちですか？", en:"Have you had an X-ray or MRI? Do you have the results with you?"},
     {ja:"高血圧、心臓病、糖尿病などはありますか？", en:"Do you have high blood pressure, heart disease, diabetes, or anything similar?"},
     {ja:"妊娠している可能性はありますか？", en:"Is there any chance you might be pregnant?"},
     {ja:"アレルギーはありますか？", en:"Do you have any allergies?"},
@@ -402,7 +411,7 @@ const STAFF_CATS = [
     {ja:"深呼吸してください。", en:"Take a deep breath."},
     {ja:"あと少しで終わります。", en:"We're almost done."},
     {ja:"終わりました。ゆっくり起き上がってください。", en:"All finished. Please sit up slowly."},
-    {ja:"急に起き上がらないでください。めまいが出ることがあります。", en:"Please don't get up too quickly — you might feel light‑headed."},
+    {ja:"急に起き上がらないでください。めまいが出ることがあります。", en:"Please don't get up too quickly — you might feel light-headed."},
     {ja:"お水をどうぞ。", en:"Here's some water for you."}
   ]}
 ]},
@@ -450,7 +459,7 @@ const STAFF_CATS = [
     {ja:"横向きで寝るときは、膝の間にクッションを挟んでください。", en:"When you sleep on your side, place a cushion between your knees."},
     {ja:"仰向けで寝るときは、膝の下にクッションを入れてください。", en:"When you sleep on your back, put a cushion under your knees."},
     {ja:"モニターの高さを目線に合わせてください。", en:"Try to set your monitor at eye level."},
-    {ja:"かかとの高い靴は控えてください。", en:"Please go easy on high‑heeled shoes."},
+    {ja:"かかとの高い靴は控えてください。", en:"Please go easy on high-heeled shoes."},
     {ja:"動画をお送りしますので、そちらを見ながら行ってください。", en:"I'll send you a video so you can follow along at home."}
   ]}
 ]},
@@ -464,7 +473,7 @@ const STAFF_CATS = [
     {ja:"サインをお願いします。", en:"Please sign here."},
     {ja:"領収書はご入用ですか？", en:"Would you like a receipt?"},
     {ja:"保険請求用の明細書をご希望ですか？ 英文でもお出しできます。", en:"Would you like an itemised receipt for an insurance claim? We can issue it in English."},
-    {ja:"回数券もございます。1回あたりのお値段がお得になります。", en:"We also offer a multi‑visit pass — it works out cheaper per session."},
+    {ja:"回数券もございます。1回あたりのお値段がお得になります。", en:"We also offer a multi-visit pass — it works out cheaper per session."},
     {ja:"申し訳ありません、当院では◯◯はお使いいただけません。", en:"I'm sorry, we don't accept ___ here."}
   ]},
   { t:"次回のご予約", items:[
@@ -475,7 +484,7 @@ const STAFF_CATS = [
     {ja:"その前後のお時間でしたらご案内できます。", en:"I can offer you a slot just before or just after that."},
     {ja:"ご予約の確認メールをお送りします。", en:"We'll send you a confirmation email."},
     {ja:"キャンセルの場合は前日までにご連絡ください。", en:"If you need to cancel, please let us know by the day before."},
-    {ja:"当日キャンセルはキャンセル料をいただく場合がございます。", en:"Same‑day cancellations may incur a fee."},
+    {ja:"当日キャンセルはキャンセル料をいただく場合がございます。", en:"Same-day cancellations may incur a fee."},
     {ja:"LINEやお電話でもご予約いただけます。", en:"You can also book by LINE or by phone."},
     {ja:"次回はこちらの診察券をお持ちください。", en:"Please bring this clinic card with you next time."}
   ]},
@@ -651,11 +660,13 @@ const PAIN_WORDS = [
 const WORKER_URL  = "https://kizu-translate.kizuchiro7.workers.dev";
 const CLINIC_KEY  = "kizu-clinic";          /* Worker 側と一致させる簡易キー */
 const LS = {
-  fav:"kizutr.fav", dir:"kizutr.dir", hist:"kizutr.hist", fill:"kizutr.fill", auto:"kizutr.auto"
+  fav:"kizutr.fav", dir:"kizutr.dir", hist:"kizutr.hist", fill:"kizutr.fill", auto:"kizutr.auto", voice:"kizutr.voice", rate:"kizutr.rate"
 };
 const S = {
   dir: localStorage.getItem(LS.dir) || "staff",   /* staff | pt */
   auto: localStorage.getItem(LS.auto) !== "0",    /* 翻訳後・表示時に自動で読み上げるか */
+  voice: JSON.parse(localStorage.getItem(LS.voice) || "{}"),  /* {en:voiceURI, ja:voiceURI} */
+  rate: parseFloat(localStorage.getItem(LS.rate) || "0.95"),
   tab: "phrases",
   cat: null,
   q: "",
@@ -698,7 +709,9 @@ function filled(p){
   if (!n) return p;
   const vals = S.fill[keyOf(p)] || [];
   if (!vals.some(v => v !== undefined && v !== "")) return p;
-  return { ja: substitute(p.ja, JA_SLOT, vals), en: substitute(p.en, EN_SLOT, vals), note: p.note };
+  return { ja: substitute(p.ja, JA_SLOT, vals),
+           en: polishEn(substitute(p.en, EN_SLOT, vals)),
+           note: p.note };
 }
 /* 入力欄の見出し。「◯◯円」なら「円」のように、直後の助数詞を拾う。 */
 function slotUnits(p){
@@ -731,18 +744,67 @@ let VOICES = [];
 function loadVoices(){ try{ VOICES = speechSynthesis.getVoices() || []; }catch(e){ VOICES = []; } }
 if ("speechSynthesis" in window){
   loadVoices();
-  speechSynthesis.addEventListener("voiceschanged", loadVoices);
+  speechSynthesis.addEventListener("voiceschanged", () => {
+    loadVoices();
+    if (S.tab === "fav") render();   /* iOSは声の一覧が遅れて届く */
+  });
+}
+/* その言語で使える声を、流暢に聞こえる順に並べる。
+   iOS/macOS の "Samantha" などの既定は圧縮音声(compact)で明らかに機械的なので、
+   Premium / Enhanced / Neural といった高品質版が入っていれば必ずそちらを選ぶ。 */
+/* macOS/iOS に同梱されているジョーク音声。院内で誤って選ばれると事故なので候補から外す。
+   端末の言語設定によって name が英語のまま返る場合と日本語化される場合の両方があるため、
+   両方の綴りを持つ。voiceURI も name と同じ値が返るので URI では判別できない。 */
+const NOVELTY = new RegExp("^(" + [
+  "Albert","Bad News","Bahh","Bells","Boing","Bubbles","Cellos","Good News","Jester","Organ",
+  "Superstar","Trinoids","Whisper","Wobble","Zarvox","Deranged","Hysterical","Junior","Princess",
+  "Ralph","Bruce","Kathy","Fred","Agnes","Victoria",
+  "ささやき声","オルガン","スーパースター","トリノイド","ベル","鐘","道化","道化師","震え","ワブル",
+  "ザーボックス","悪い知らせ","良い知らせ","バブル","チェロ","王女","錯乱","ヒステリック","ジュニア",
+  "アルバート","フレッド","キャシー","ラルフ","バー","ボイン"
+].join("|") + ")", "i");
+function voicesFor(lang){
+  const want = lang === "ja" ? "ja" : "en";
+  return VOICES
+    .filter(v => (v.lang || "").toLowerCase().startsWith(want))
+    .filter(v => !NOVELTY.test((v.name || "").trim()))
+    .map(v => ({ v, s: voiceScore(v, want) }))
+    .sort((a, b) => b.s - a.s)
+    .map(x => x.v);
+}
+function voiceScore(v, want){
+  const n = (v.name || ""), lg = (v.lang || "").replace("_", "-");
+  let s = 0;
+  if (/premium/i.test(n))       s += 60;
+  else if (/enhanced/i.test(n)) s += 50;
+  if (/neural|natural|siri/i.test(n)) s += 45;
+  if (/google/i.test(n))        s += 25;   /* Android/Chrome の標準はおおむね自然 */
+  if (/compact|eloquence|novelty/i.test(n)) s -= 50;
+  if (want === "en"){
+    /* 患者は英語圏に限らないので、いちばん耳慣れた en-US を既定にする */
+    if (/^en-US$/i.test(lg))      s += 18;
+    else if (/^en-GB$/i.test(lg)) s += 10;
+    else if (/^en-(AU|CA|IE|NZ)$/i.test(lg)) s += 4;
+    if (/Ava|Zoe|Allison|Susan|Tom|Evan|Nathan|Joelle/i.test(n)) s += 18;
+    if (/Aria|Jenny|Guy|Michelle/i.test(n)) s += 15;   /* Microsoft の新しい声 */
+    if (/Samantha|Alex|Daniel|Karen|Moira|Fiona/i.test(n)) s += 6;
+  } else {
+    if (/Kyoko|O-Ren|Hattori|Nanami|Ayumi|Keita/i.test(n)) s += 15;
+  }
+  /* Ventura以降の砕けたキャラクター音声。悪くはないが院内の説明向きではない */
+  if (/^(Eddy|Flo|Grandma|Grandpa|Reed|Rocko|Sandy|Shelley)\b/i.test(n)) s -= 12;
+  if (v.localService) s += 3;
+  return s;
 }
 function pickVoice(lang){
-  const want = lang === "ja" ? "ja" : "en";
-  const pool = VOICES.filter(v => (v.lang||"").toLowerCase().startsWith(want));
-  if (!pool.length) return null;
-  /* 端末内蔵の自然な声を優先 */
-  const pref = want === "ja"
-    ? ["Kyoko","O-Ren","Otoya","Google 日本語","Microsoft Nanami","Microsoft Ayumi"]
-    : ["Samantha","Ava","Karen","Daniel","Google US English","Microsoft Aria","Microsoft Jenny"];
-  for (const name of pref){ const hit = pool.find(v => (v.name||"").includes(name)); if (hit) return hit; }
-  return pool.find(v => v.localService) || pool[0];
+  const list = voicesFor(lang);
+  if (!list.length) return null;
+  const saved = S.voice[lang];
+  if (saved){
+    const hit = list.find(v => v.voiceURI === saved) || VOICES.find(v => v.voiceURI === saved);
+    if (hit) return hit;
+  }
+  return list[0];
 }
 /* iOS Safari は「ユーザー操作の中で1度 speak() を呼ぶ」まで音声合成を動かさない。
    非同期のfetchを挟むと操作の文脈が切れて自動読み上げが無音になるので、
@@ -760,18 +822,58 @@ function primeSpeech(){
 document.addEventListener("pointerdown", primeSpeech, { once: true });
 document.addEventListener("touchstart", primeSpeech, { once: true, passive: true });
 
+const MONTHS = ["January","February","March","April","May","June",
+                "July","August","September","October","November","December"];
+const ordinal = (d) => {
+  const t = d % 100;
+  if (t >= 11 && t <= 13) return d + "th";
+  return d + ({1:"st",2:"nd",3:"rd"}[d % 10] || "th");
+};
+/* 埋め込んだ数字を英語として自然な形に直す。
+   "10/3 at 14:00" のままだと "ten slash three at fourteen zero zero" と読まれるので、
+   表示と読み上げの両方をここで整える(見えている文と聞こえる文をずらさないため)。 */
+function polishEn(t){
+  t = t.replace(/\b(\d{1,2})\/(\d{1,2})\b/g, (m, a, b) => {
+    const mi = +a - 1, d = +b;
+    return (mi < 0 || mi > 11 || d < 1 || d > 31) ? m : MONTHS[mi] + " " + ordinal(d);
+  });
+  t = t.replace(/\b(\d{1,2}):(\d{2})\b/g, (m, h, mm) => {
+    h = +h;
+    if (h > 23) return m;
+    const ap = h < 12 ? "a.m." : "p.m.";
+    const hh = (h % 12) || 12;
+    return mm === "00" ? `${hh} ${ap}` : `${hh}:${mm} ${ap}`;
+  });
+  return t;
+}
+/* 音声合成に渡す直前の整形。記号をそのまま渡すと読み飛ばしや棒読みの原因になる。 */
+function forSpeech(text, lang){
+  let t = String(text)
+    .replace(/[◯_]{2,}|◯|＿+/g, "")     /* 未入力のプレースホルダは読まない */
+    .replace(/[—–]/g, ", ")              /* ダッシュは「間」として読ませる */
+    .replace(/…/g, ", ");
+  if (lang === "en"){
+    t = t.replace(/¥\s*([\d,]+)/g, "$1 yen")
+         .replace(/\bKIZU\b/g, "Keezoo")   /* 「カイズー」ではなく「きづ」に近づける */
+         .replace(/\bMRI\b/g, "M R I");
+  } else {
+    t = t.replace(/¥\s*([\d,]+)/g, "$1円");
+  }
+  return t.replace(/\s{2,}/g, " ").trim();
+}
+
 function speak(text, lang){
   if (!("speechSynthesis" in window)) { toast("この端末は読み上げに対応していません"); return; }
-  const body = String(text).replace(/[◯_]{2,}|◯|＿+/g, "").trim();
+  const body = forSpeech(text, lang);
   if (!body) return;
   try{
     speechSynthesis.cancel();
     speechSynthesis.resume();          /* iOSでpause状態のまま止まることがある */
     const u = new SpeechSynthesisUtterance(body);
     const v = pickVoice(lang);
-    if (v) u.voice = v;
-    u.lang = lang === "ja" ? "ja-JP" : "en-US";
-    u.rate = lang === "ja" ? 0.95 : 0.9;   /* 患者向けにやや遅め */
+    if (v){ u.voice = v; u.lang = v.lang; }
+    else  { u.lang = lang === "ja" ? "ja-JP" : "en-US"; }
+    u.rate = S.rate;
     u.pitch = 1;
     speechSynthesis.speak(u);
   }catch(e){ toast("読み上げに失敗しました"); }
@@ -918,16 +1020,73 @@ function renderPhrases(){
   bindList(main, flat);
 }
 
+const SAMPLE = {
+  en: "Hello, and welcome to KIZU Chiropractic. Please lie face down and relax.",
+  ja: "こんにちは。うつ伏せになって、力を抜いてください。"
+};
+function voiceOptions(lang){
+  const list = voicesFor(lang);
+  if (!list.length) return `<option value="">この端末に${lang==="en"?"英語":"日本語"}の声がありません</option>`;
+  const cur = pickVoice(lang);
+  return list.map((v, i) =>
+    `<option value="${esc(v.voiceURI)}"${cur && v.voiceURI === cur.voiceURI ? " selected" : ""}>${
+      esc(v.name)}${i === 0 ? "（おすすめ）" : ""}</option>`).join("");
+}
+function settingsHTML(){
+  return `<div class="tool" style="margin-top:20px">
+    <h3>音声の設定</h3>
+    <div class="sub">この端末だけの設定です。候補は端末に入っている声から出ます。</div>
+    <div class="setrow"><span class="sk">English</span>
+      <select id="vEn">${voiceOptions("en")}</select>
+      <button class="play" data-test="en">▶</button></div>
+    <div class="setrow"><span class="sk">日本語</span>
+      <select id="vJa">${voiceOptions("ja")}</select>
+      <button class="play" data-test="ja">▶</button></div>
+    <div class="setrow"><span class="sk">速さ</span>
+      <input type="range" id="vRate" min="0.7" max="1.15" step="0.05" value="${S.rate}">
+      <span class="val" id="vRateV">${S.rate.toFixed(2)}</span></div>
+    <div class="hint" style="margin-top:14px">
+      <b>英語がもっと自然になる設定（iPhone）</b><br>
+      設定 → アクセシビリティ → 読み上げコンテンツ → 声 → 英語 から
+      <b>Ava</b> や <b>Zoe</b> などの高品質な声をダウンロードすると、
+      ここの候補に「（Premium）」「（Enhanced）」付きで出てきます。
+      端末の初期状態の声は圧縮版で、どうしても機械的に聞こえます。<br><br>
+      <b>Android</b> は 設定 → システム → 言語と入力 → 音声出力 から
+      Google の音声データを追加してください。
+    </div>
+  </div>`;
+}
+function bindSettings(){
+  const sel = (id, lang) => {
+    const el = $(id);
+    if (!el) return;
+    el.onchange = () => {
+      if (el.value) S.voice[lang] = el.value; else delete S.voice[lang];
+      localStorage.setItem(LS.voice, JSON.stringify(S.voice));
+      speak(SAMPLE[lang], lang);
+    };
+  };
+  sel("#vEn", "en"); sel("#vJa", "ja");
+  document.querySelectorAll("[data-test]").forEach(b =>
+    b.onclick = () => speak(SAMPLE[b.dataset.test], b.dataset.test));
+  const r = $("#vRate");
+  if (r){
+    r.oninput  = () => { S.rate = parseFloat(r.value); $("#vRateV").textContent = S.rate.toFixed(2);
+                         localStorage.setItem(LS.rate, String(S.rate)); };
+    r.onchange = () => speak(SAMPLE[S.dir === "staff" ? "en" : "ja"], S.dir === "staff" ? "en" : "ja");
+  }
+}
+
 function renderFav(){
   const main = $("#main");
   const list = allPhrases().filter(p => S.fav.includes(keyOf(p)));
-  if (!list.length){
-    main.innerHTML = `<div class="empty">まだ登録がありません。<br>フレーズの右の <b>☆</b> をタップすると、<br>よく使うフレーズをここに集められます。</div>`;
-    return;
-  }
-  main.innerHTML = `<div class="gtitle">よく使うフレーズ ${list.length}件</div>
-    <div class="plist" id="plist">${list.map((p,i)=>cardHTML(p,i,p._warn)).join("")}</div>`;
-  bindList($("#plist"), list);
+  main.innerHTML = (list.length
+    ? `<div class="gtitle">よく使うフレーズ ${list.length}件</div>
+       <div class="plist" id="plist">${list.map((p,i)=>cardHTML(p,i,p._warn)).join("")}</div>`
+    : `<div class="empty" style="padding:28px 20px">まだ登録がありません。<br>フレーズの右の <b>☆</b> をタップすると、<br>よく使うフレーズをここに集められます。</div>`
+  ) + settingsHTML();
+  if (list.length) bindList($("#plist"), list);
+  bindSettings();
 }
 
 /* =====================================================================
