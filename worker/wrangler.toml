@@ -1,0 +1,24 @@
+name = "kizu-translate"
+main = "src/index.js"
+compatibility_date = "2026-08-24"
+
+[observability]
+enabled = true
+
+[vars]
+# CORS許可オリジン(カンマ区切り)。ブラウザ側の制御でしかないので、
+# 実際の足止めは X-Clinic-Key ヘッダ。
+ALLOWED_ORIGIN = "https://kizuchiro7-ops.github.io"
+
+# 使用モデル。速度優先に切り替えたい場合は claude-haiku-4-5 に変更して再デプロイ。
+MODEL = "claude-opus-5"
+
+# IPあたりのバースト制限。period は 10 か 60 のみ。
+[[ratelimits]]
+name = "RATE_LIMIT"
+namespace_id = "2001"
+simple = { limit = 30, period = 60 }
+
+# Secrets (`wrangler secret put` で設定。ここには書かない):
+#   ANTHROPIC_API_KEY
+#   CLINIC_KEY   … web/index.html の CLINIC_KEY と同じ値

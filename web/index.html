@@ -1,0 +1,1120 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<meta name="theme-color" content="#0f766e">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="KIZU 翻訳">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>KIZU 翻訳 | KIZU Chiropractic Translator</title>
+<style>
+:root{
+  --bg:#f4f6f8; --card:#ffffff; --ink:#12232b; --ink-2:#5b7180; --line:#dde5ea;
+  --brand:#0f766e; --brand-ink:#ffffff; --brand-soft:#e2f2f0;
+  --accent:#b45309; --danger:#b91c1c; --danger-soft:#fef2f2;
+  --shadow:0 1px 2px rgba(16,40,50,.06), 0 8px 24px rgba(16,40,50,.07);
+  --r:14px; --safe-b:env(safe-area-inset-bottom,0px); --safe-t:env(safe-area-inset-top,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --bg:#0e1517; --card:#161f22; --ink:#eaf2f4; --ink-2:#93a8b1; --line:#26353a;
+    --brand:#2dd4bf; --brand-ink:#04241f; --brand-soft:#12312e;
+    --accent:#fbbf24; --danger:#f87171; --danger-soft:#2a1414;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.35);
+  }
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0;height:100%}
+body{
+  background:var(--bg); color:var(--ink);
+  font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Noto Sans JP","Segoe UI",Roboto,sans-serif;
+  font-size:16px; line-height:1.55; overscroll-behavior-y:none;
+  -webkit-text-size-adjust:100%;
+}
+button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
+input,textarea{font:inherit;color:inherit}
+
+/* ---------- App shell ---------- */
+#app{display:flex;flex-direction:column;height:100dvh}
+header{
+  padding:calc(var(--safe-t) + 10px) 14px 10px; background:var(--card);
+  border-bottom:1px solid var(--line); flex:0 0 auto; position:relative; z-index:5;
+}
+.hrow{display:flex;align-items:center;gap:10px}
+.logo{font-weight:700;font-size:15px;letter-spacing:.01em;flex:1;min-width:0;white-space:nowrap;overflow:hidden}
+.logo small{display:block;font-weight:500;font-size:10.5px;color:var(--ink-2);letter-spacing:.03em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dirtoggle{display:flex;background:var(--bg);border:1px solid var(--line);border-radius:999px;padding:3px;gap:2px}
+.dirtoggle button{padding:7px 10px;border-radius:999px;font-size:12px;font-weight:600;color:var(--ink-2);white-space:nowrap}
+.dirtoggle button[aria-pressed="true"]{background:var(--brand);color:var(--brand-ink)}
+
+.searchwrap{margin-top:10px;position:relative;display:none}
+.searchwrap.on{display:block}
+.searchwrap input{
+  width:100%;padding:11px 38px 11px 38px;border-radius:11px;border:1px solid var(--line);
+  background:var(--bg);font-size:16px;outline:none;
+}
+.searchwrap input:focus{border-color:var(--brand)}
+.searchwrap .si{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--ink-2);font-size:15px}
+.searchwrap .sx{position:absolute;right:6px;top:50%;transform:translateY(-50%);padding:8px;color:var(--ink-2)}
+
+main{flex:1 1 auto;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:12px 12px 24px}
+main::-webkit-scrollbar{width:0}
+
+/* ---------- Tab bar ---------- */
+nav{
+  flex:0 0 auto;display:grid;grid-template-columns:repeat(4,1fr);
+  background:var(--card);border-top:1px solid var(--line);
+  padding-bottom:var(--safe-b);
+}
+nav button{padding:8px 2px 6px;display:flex;flex-direction:column;align-items:center;gap:3px;color:var(--ink-2)}
+nav button .ni{font-size:19px;line-height:1}
+nav button .nl{font-size:10px;font-weight:600;letter-spacing:.02em}
+nav button[aria-pressed="true"]{color:var(--brand)}
+
+/* ---------- Category chips ---------- */
+.chips{display:flex;gap:7px;overflow-x:auto;padding:2px 0 12px;margin:0 -12px;padding-left:12px;padding-right:12px}
+.chips::-webkit-scrollbar{display:none}
+.chip{
+  flex:0 0 auto;padding:9px 14px;border-radius:999px;background:var(--card);
+  border:1px solid var(--line);font-size:13px;font-weight:600;color:var(--ink-2);box-shadow:var(--shadow)
+}
+.chip[aria-pressed="true"]{background:var(--brand);color:var(--brand-ink);border-color:var(--brand)}
+
+/* ---------- Phrase list ---------- */
+.gtitle{font-size:12px;font-weight:700;color:var(--ink-2);letter-spacing:.06em;margin:18px 4px 8px;text-transform:uppercase}
+.gtitle:first-child{margin-top:2px}
+.plist{display:flex;flex-direction:column;gap:8px}
+.pcard{
+  background:var(--card);border:1px solid var(--line);border-radius:var(--r);
+  box-shadow:var(--shadow);padding:13px 14px;display:flex;align-items:flex-start;gap:10px;text-align:left;width:100%
+}
+.pcard:active{transform:scale(.99)}
+.pcard .ptext{flex:1;min-width:0;display:block}
+.pcard .pri{display:block;font-size:16px;font-weight:600;line-height:1.45}
+.pcard .sec{display:block;font-size:13.5px;color:var(--ink-2);margin-top:3px;line-height:1.45}
+.pcard .fav{flex:0 0 auto;padding:4px;font-size:16px;color:var(--line)}
+.pcard .fav.on{color:var(--accent)}
+.pcard .note{display:block;font-size:11.5px;color:var(--danger);margin-top:6px;font-weight:600;line-height:1.5}
+.pcard.warn{border-color:var(--danger);background:var(--danger-soft)}
+.pcard.warn .pri{color:var(--danger)}
+
+.empty{text-align:center;color:var(--ink-2);font-size:14px;padding:40px 20px;line-height:1.8}
+
+/* ---------- Big display overlay ---------- */
+#show{
+  position:fixed;inset:0;z-index:60;background:var(--bg);display:none;
+  flex-direction:column;padding:calc(var(--safe-t) + 8px) 16px calc(var(--safe-b) + 16px)
+}
+#show.on{display:flex}
+#show .top{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}
+#show .top button{padding:10px;font-size:14px;font-weight:600;color:var(--ink-2)}
+#show .body{flex:1;display:flex;flex-direction:column;justify-content:center;gap:14px;overflow-y:auto;padding:8px 0}
+.bigblock{background:var(--card);border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow);padding:20px 18px}
+.bigblock .lang{font-size:10px;font-weight:800;letter-spacing:.14em;color:var(--ink-2);margin-bottom:8px;display:flex;align-items:center;gap:8px}
+.bigblock .lang span{flex:1}
+.bigblock .txt{font-size:26px;font-weight:600;line-height:1.4;word-break:break-word}
+.bigblock.mainblk{border-color:var(--brand);border-width:2px}
+.bigblock.mainblk .txt{font-size:30px}
+.spk{padding:8px 13px;border-radius:999px;background:var(--brand-soft);color:var(--brand);font-size:12px;font-weight:700;display:inline-flex;align-items:center;gap:5px}
+.spk:active{opacity:.6}
+#show .foot{display:flex;gap:8px}
+#show .foot button{flex:1;padding:15px;border-radius:13px;background:var(--card);border:1px solid var(--line);font-weight:700;font-size:14px;box-shadow:var(--shadow)}
+#show .foot button.pri{background:var(--brand);color:var(--brand-ink);border-color:var(--brand)}
+
+/* ---------- AI translate ---------- */
+.aibox{background:var(--card);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);padding:12px}
+.aibox textarea{
+  width:100%;min-height:96px;border:0;background:transparent;resize:none;outline:none;font-size:17px;line-height:1.5
+}
+.airow{display:flex;gap:8px;align-items:center;margin-top:8px;border-top:1px solid var(--line);padding-top:10px}
+.airow .grow{flex:1}
+.btn{padding:11px 14px;white-space:nowrap;border-radius:11px;font-weight:700;font-size:14px;background:var(--bg);border:1px solid var(--line)}
+.btn.pri{background:var(--brand);color:var(--brand-ink);border-color:var(--brand)}
+.btn:disabled{opacity:.45}
+.mic{width:46px;height:46px;border-radius:50%;background:var(--bg);border:1px solid var(--line);display:grid;place-items:center;font-size:19px;flex:0 0 auto}
+.mic.rec{background:var(--danger);color:#fff;border-color:var(--danger);animation:pulse 1.2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.55}}
+.hint{font-size:11.5px;color:var(--ink-2);margin:10px 4px 0;line-height:1.6}
+
+.result{margin-top:12px;background:var(--card);border:1px solid var(--line);border-left:4px solid var(--brand);border-radius:var(--r);box-shadow:var(--shadow);padding:14px}
+.result .lang{font-size:10px;font-weight:800;letter-spacing:.14em;color:var(--ink-2);margin-bottom:7px}
+.result .txt{font-size:20px;font-weight:600;line-height:1.5;word-break:break-word}
+.result .acts{display:flex;gap:8px;margin-top:12px}
+.result .acts button{flex:1;padding:11px 6px;border-radius:10px;background:var(--bg);border:1px solid var(--line);font-size:12.5px;font-weight:700;white-space:nowrap}
+.hist{margin-top:20px}
+.hitem{background:var(--card);border:1px solid var(--line);border-radius:11px;padding:11px 12px;margin-bottom:7px}
+.hitem .a{font-size:13px;color:var(--ink-2)}
+.hitem .b{font-size:15px;font-weight:600;margin-top:3px}
+
+/* ---------- Tools ---------- */
+.tool{background:var(--card);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);padding:14px;margin-bottom:12px}
+.tool h3{margin:0 0 3px;font-size:15px;font-weight:700}
+.tool .sub{font-size:12px;color:var(--ink-2);margin-bottom:12px}
+.scale{display:grid;grid-template-columns:repeat(6,1fr);gap:6px}
+.scale button{aspect-ratio:1;border-radius:11px;border:1px solid var(--line);background:var(--bg);font-weight:700;font-size:17px;display:grid;place-items:center}
+.scale button[aria-pressed="true"]{background:var(--brand);color:var(--brand-ink);border-color:var(--brand)}
+.scalelegend{display:flex;justify-content:space-between;font-size:11px;color:var(--ink-2);margin-top:8px}
+svg.bodychart{width:100%;height:auto;display:block;touch-action:manipulation}
+svg.bodychart .zone{fill:var(--bg);stroke:var(--ink-2);stroke-width:1.2;opacity:.85}
+svg.bodychart .zone.sel{fill:var(--danger);opacity:.75;stroke:var(--danger)}
+svg.bodychart .lbl{fill:var(--ink-2);font-size:9px;font-weight:600;pointer-events:none}
+.selout{margin-top:10px;font-size:13px;line-height:1.7;background:var(--bg);border-radius:10px;padding:10px 12px;min-height:44px}
+.selout b{color:var(--brand)}
+
+/* ---------- Toast ---------- */
+#toast{
+  position:fixed;left:50%;bottom:calc(var(--safe-b) + 76px);transform:translateX(-50%) translateY(14px);
+  background:var(--ink);color:var(--bg);padding:10px 18px;border-radius:999px;font-size:13px;font-weight:600;
+  opacity:0;pointer-events:none;transition:.22s;z-index:90;white-space:nowrap;max-width:90vw
+}
+#toast.on{opacity:.96;transform:translateX(-50%) translateY(0)}
+.spinner{width:15px;height:15px;border:2px solid currentColor;border-top-color:transparent;border-radius:50%;display:inline-block;animation:spin .7s linear infinite;vertical-align:-2px}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <div class="hrow">
+      <div class="logo">KIZU 翻訳<small>日本語 ⇄ English</small></div>
+      <div class="dirtoggle" role="group" aria-label="翻訳の向き">
+        <button id="dirStaff" aria-pressed="true">スタッフ→患者</button>
+        <button id="dirPt" aria-pressed="false">患者→スタッフ</button>
+      </div>
+    </div>
+    <div class="searchwrap" id="searchwrap">
+      <span class="si">⌕</span>
+      <input id="q" type="search" placeholder="日本語 / English で検索" autocomplete="off" autocorrect="off" spellcheck="false">
+      <button class="sx" id="qx" aria-label="クリア">✕</button>
+    </div>
+  </header>
+
+  <main id="main"></main>
+
+  <nav role="tablist">
+    <button id="tabPhrases" aria-pressed="true"><span class="ni">💬</span><span class="nl">フレーズ</span></button>
+    <button id="tabAi"      aria-pressed="false"><span class="ni">✨</span><span class="nl">AI翻訳</span></button>
+    <button id="tabTools"   aria-pressed="false"><span class="ni">🩺</span><span class="nl">問診ツール</span></button>
+    <button id="tabFav"     aria-pressed="false"><span class="ni">★</span><span class="nl">よく使う</span></button>
+  </nav>
+</div>
+
+<div id="show" role="dialog" aria-modal="true">
+  <div class="top">
+    <button id="showClose">✕ 閉じる</button>
+    <button id="showFav">☆ よく使う</button>
+  </div>
+  <div class="body" id="showBody"></div>
+  <div class="foot">
+    <button id="showPrev">← 前</button>
+    <button class="pri" id="showSpeak">🔊 読み上げ</button>
+    <button id="showNext">次 →</button>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+"use strict";
+/* =====================================================================
+   PHRASE DATA
+   ja = 日本語 / en = English / note = スタッフ向け補足(患者には表示しない)
+   warn = 危険信号スクリーニング項目(赤で表示)
+   ===================================================================== */
+const STAFF_CATS = [
+{ id:"reception", label:"受付", icon:"👋", groups:[
+  { t:"あいさつ・受付", items:[
+    {ja:"こんにちは。KIZUカイロプラクティックへようこそ。", en:"Hello, and welcome to KIZU Chiropractic."},
+    {ja:"このアプリで通訳します。ゆっくり話してください。", en:"We'll use this app to communicate. Please speak slowly."},
+    {ja:"本日はご予約をいただいていますか？", en:"Do you have an appointment today?"},
+    {ja:"お名前を教えていただけますか？", en:"May I have your name, please?"},
+    {ja:"こちらにお名前をご記入ください。", en:"Could you write your name here, please?"},
+    {ja:"当院は初めてですか？", en:"Is this your first visit with us?"},
+    {ja:"少々お待ちください。", en:"One moment, please."},
+    {ja:"お待たせして申し訳ありません。", en:"I'm sorry to keep you waiting."}
+  ]},
+  { t:"問診票", items:[
+    {ja:"問診票のご記入をお願いします。", en:"Please fill out this intake form."},
+    {ja:"ご記入には10分ほどかかります。", en:"It takes about ten minutes to complete."},
+    {ja:"分からないところは飛ばしてください。あとで一緒に確認します。", en:"Please skip anything that isn't clear — we'll go through it together afterwards."},
+    {ja:"ご記入が終わりましたら、お声がけください。", en:"Please let us know when you've finished."},
+    {ja:"生年月日をご記入ください。", en:"Please write your date of birth."},
+    {ja:"日本での連絡先電話番号を教えてください。", en:"Could I have a phone number where we can reach you in Japan?"},
+    {ja:"メールアドレスを教えていただけますか？", en:"May I have your email address?"}
+  ]},
+  { t:"保険・料金の説明", items:[
+    {ja:"日本の健康保険はカイロプラクティックには使えません。自費でのお支払いになります。", en:"Japanese national health insurance does not cover chiropractic care, so payment is out of pocket."},
+    {ja:"海外の保険会社に提出できる領収書をお出しできます。", en:"We can provide a receipt you can submit to your overseas insurance company."},
+    {ja:"初回は問診と検査を含めて◯◯円です。", en:"The first visit, including the consultation and assessment, is ¥___."},
+    {ja:"2回目以降は◯◯円です。", en:"Follow-up visits are ¥___."},
+    {ja:"本日の施術時間は約◯◯分です。", en:"Today's session will take about ___ minutes."}
+  ]},
+  { t:"院内のご案内", items:[
+    {ja:"こちらでお履き物をお脱ぎください。", en:"Please take your shoes off here."},
+    {ja:"貴重品はこちらのロッカーにお入れください。", en:"Please put your valuables in this locker."},
+    {ja:"お手洗いはこちらです。", en:"The restroom is this way."},
+    {ja:"こちらにおかけになってお待ちください。", en:"Please have a seat and wait here."},
+    {ja:"あと◯分ほどお待ちください。", en:"It will be about ___ more minutes."},
+    {ja:"動きやすい服にお着替えいただけますか。更衣室はこちらです。", en:"Could you change into something comfortable to move in? The changing room is here."},
+    {ja:"お着替えをお貸しできます。", en:"We can lend you a change of clothes."},
+    {ja:"上着とアクセサリーを外していただけますか。", en:"Could you remove your jacket and any jewellery?"},
+    {ja:"院内では携帯電話をマナーモードにしてください。", en:"Please set your phone to silent while you're in the clinic."},
+    {ja:"Wi‑Fiをお使いになれます。パスワードはこちらです。", en:"You're welcome to use our Wi‑Fi. Here's the password."}
+  ]}
+]},
+
+{ id:"intake", label:"問診", icon:"📋", groups:[
+  { t:"主訴を聞く", items:[
+    {ja:"本日はどのような症状でいらっしゃいましたか？", en:"What brings you in today?"},
+    {ja:"どこが一番つらいですか？ 人体図で教えてください。", en:"Where does it bother you most? Please show me on the body chart."},
+    {ja:"痛むところを指でさわってみてください。", en:"Could you point to exactly where it hurts?"},
+    {ja:"つらいところは他にもありますか？", en:"Is there anywhere else that bothers you?"},
+    {ja:"いつから始まりましたか？", en:"When did it start?"},
+    {ja:"どのくらい続いていますか？", en:"How long have you had this?"},
+    {ja:"きっかけになった出来事はありますか？（事故・スポーツ・重い物を持ったなど）", en:"Was there anything that set it off — an accident, sports, lifting something heavy?"},
+    {ja:"以前にも同じ症状がありましたか？", en:"Have you had this same problem before?"},
+    {ja:"だんだん良くなっていますか、悪くなっていますか、変わりませんか？", en:"Is it getting better, getting worse, or staying about the same?"}
+  ]},
+  { t:"痛みの性質", items:[
+    {ja:"どんな痛みですか？ ズキズキ／鋭い／鈍い／焼けるような／しびれるような。", en:"How would you describe it — throbbing, sharp, dull, burning, or tingling?"},
+    {ja:"痛みは他の場所に広がりますか？", en:"Does the pain spread anywhere else?"},
+    {ja:"腕や脚にしびれはありますか？", en:"Do you have any numbness or pins and needles in your arms or legs?"},
+    {ja:"痛みの強さを0から10で教えてください。0が痛みなし、10が想像できる最もひどい痛みです。", en:"On a scale of 0 to 10, how bad is it? 0 is no pain, 10 is the worst pain you can imagine."},
+    {ja:"一日のうちで、いつが一番つらいですか？ 朝／日中／夕方／夜。", en:"When is it worst — morning, during the day, evening, or night?"},
+    {ja:"どんな動きをすると痛みますか？", en:"What movements bring the pain on?"},
+    {ja:"どんなときに楽になりますか？", en:"What makes it feel better?"},
+    {ja:"座っているときと立っているとき、どちらがつらいですか？", en:"Is it worse sitting or standing?"},
+    {ja:"咳やくしゃみで響きますか？", en:"Does coughing or sneezing make it worse?"},
+    {ja:"日常生活でできなくなったことはありますか？", en:"Is there anything you can no longer do because of this?"}
+  ]},
+  { t:"生活背景", items:[
+    {ja:"お仕事は何をされていますか？", en:"What kind of work do you do?"},
+    {ja:"一日にどのくらい座っていますか？", en:"How many hours a day do you spend sitting?"},
+    {ja:"パソコンやスマートフォンを使う時間は長いですか？", en:"Do you spend a lot of time on a computer or phone?"},
+    {ja:"運動やスポーツはされますか？", en:"Do you exercise or play any sports?"},
+    {ja:"よく眠れていますか？", en:"Are you sleeping well?"},
+    {ja:"どんな姿勢で寝ていますか？ 仰向け／うつ伏せ／横向き。", en:"What position do you sleep in — on your back, front, or side?"},
+    {ja:"枕やマットレスは体に合っていますか？", en:"Do your pillow and mattress suit you?"},
+    {ja:"日本にはどのくらい滞在されますか？", en:"How long will you be staying in Japan?"}
+  ]},
+  { t:"既往歴・安全確認", items:[
+    {ja:"現在、飲んでいるお薬はありますか？", en:"Are you taking any medication at the moment?"},
+    {ja:"血液をサラサラにするお薬（抗凝固薬）を飲んでいますか？", en:"Are you taking any blood thinners or anticoagulants?"},
+    {ja:"骨粗しょう症と言われたことはありますか？", en:"Have you ever been told you have osteoporosis?"},
+    {ja:"骨折や手術を受けたことはありますか？", en:"Have you ever had a fracture or any surgery?"},
+    {ja:"現在、病院にかかっていますか？", en:"Are you currently under a doctor's care?"},
+    {ja:"レントゲンやMRIを撮ったことはありますか？ 結果をお持ちですか？", en:"Have you had an X‑ray or MRI? Do you have the results with you?"},
+    {ja:"高血圧、心臓病、糖尿病などはありますか？", en:"Do you have high blood pressure, heart disease, diabetes, or anything similar?"},
+    {ja:"妊娠している可能性はありますか？", en:"Is there any chance you might be pregnant?"},
+    {ja:"アレルギーはありますか？", en:"Do you have any allergies?"},
+    {ja:"これまでにカイロプラクティックを受けたことはありますか？", en:"Have you had chiropractic care before?"}
+  ]},
+  { t:"⚠️ 危険信号のスクリーニング", warn:true, items:[
+    {ja:"排尿や排便がしづらい、または感覚が鈍いことはありますか？", en:"Have you had any trouble passing urine or having a bowel movement, or any numbness in that area?", note:"馬尾症候群の疑い → 直ちに救急受診"},
+    {ja:"股のまわりや内ももの感覚が鈍いことはありますか？", en:"Any numbness around your groin or inner thighs?", note:"サドル麻痺 → 馬尾症候群の疑い"},
+    {ja:"手や足に力が入らないことはありますか？", en:"Do you have any weakness in your hands or feet?", note:"進行性の筋力低下 → 医療機関紹介"},
+    {ja:"安静にしていても、夜間に強く痛みますか？", en:"Does it hurt badly at night, even when you're resting?", note:"夜間痛 → 腫瘍・感染の除外が必要"},
+    {ja:"最近、意図せず体重が減りましたか？", en:"Have you lost weight recently without trying to?", note:"原因不明の体重減少 → 要注意"},
+    {ja:"発熱や悪寒はありますか？", en:"Do you have a fever or chills?", note:"感染の可能性"},
+    {ja:"がんの治療を受けたことはありますか？", en:"Have you ever been treated for cancer?", note:"転移の除外が必要"},
+    {ja:"めまい、ろれつが回らない、ものが二重に見える、といったことはありますか？", en:"Any dizziness, slurred speech, or double vision?", note:"椎骨動脈系のスクリーニング → 頸椎スラストは避ける"},
+    {ja:"最近、頭や首を強くぶつけましたか？", en:"Have you had a significant blow to your head or neck recently?", note:"外傷歴 → 画像診断を優先"},
+    {ja:"症状によっては、まず医療機関の受診をおすすめする場合があります。", en:"Depending on your symptoms, we may recommend that you see a medical doctor first."},
+    {ja:"今回は施術を控えて、お医者さんに診てもらうことをおすすめします。紹介状をお書きします。", en:"I'd recommend holding off on care today and having a medical doctor take a look. I'll write you a referral letter."}
+  ]}
+]},
+
+{ id:"during", label:"施術中", icon:"🤲", groups:[
+  { t:"説明と同意", items:[
+    {ja:"これから検査をします。姿勢と体の動きを確認します。", en:"I'm going to assess you now — I'll check your posture and how your body moves."},
+    {ja:"今から何をするか、その都度お伝えします。", en:"I'll tell you what I'm doing at each step."},
+    {ja:"痛かったり、不安に感じたりしたら、いつでも「ストップ」と言ってください。", en:"If anything hurts or feels uncomfortable, just say \"stop\" at any time."},
+    {ja:"施術中にポキッと音が鳴ることがありますが、心配いりません。関節から気泡が抜ける音です。", en:"You may hear a popping sound. That's normal — it's just gas releasing from the joint."},
+    {ja:"痛みを伴う施術ではありません。", en:"This shouldn't be painful."},
+    {ja:"よろしいですか？ 始めてもいいですか？", en:"Is that all right? May I begin?"},
+    {ja:"何か質問はありますか？", en:"Do you have any questions before we start?"}
+  ]},
+  { t:"体位の指示", items:[
+    {ja:"うつ伏せになってください。", en:"Please lie face down."},
+    {ja:"仰向けになってください。", en:"Please lie on your back."},
+    {ja:"横向きになってください。", en:"Please lie on your side."},
+    {ja:"右を下にしてください。", en:"Please lie on your right side."},
+    {ja:"左を下にしてください。", en:"Please lie on your left side."},
+    {ja:"座ってください。", en:"Please sit up."},
+    {ja:"立ってください。", en:"Please stand up."},
+    {ja:"ゆっくり起き上がってください。", en:"Please sit up slowly."},
+    {ja:"ベッドに上がってください。", en:"Please get on the table."},
+    {ja:"もう少し上（頭側）に移動してください。", en:"Could you move up a little, towards the head of the table?"},
+    {ja:"もう少し下に移動してください。", en:"Could you move down a little?"},
+    {ja:"顔をこちらに向けてください。", en:"Please turn your head this way."},
+    {ja:"膝を曲げてください。", en:"Please bend your knees."},
+    {ja:"腕を胸の前で組んでください。", en:"Please cross your arms over your chest."},
+    {ja:"腕を体の横に置いてください。", en:"Please rest your arms at your sides."},
+    {ja:"ベルトを緩めていただけますか。", en:"Could you loosen your belt?"},
+    {ja:"髪を結んでいたらほどいていただけますか。", en:"Could you let your hair down if it's tied up?"}
+  ]},
+  { t:"動作の指示", items:[
+    {ja:"力を抜いて、リラックスしてください。", en:"Relax and let the tension go."},
+    {ja:"息を吸って……はい、吐いてください。", en:"Breathe in… and now breathe out."},
+    {ja:"動かないでください。", en:"Please stay still."},
+    {ja:"私にお任せください。ご自分では動かさないでください。", en:"Let me do the moving — please don't help."},
+    {ja:"前に曲げてください。", en:"Please bend forward."},
+    {ja:"後ろに反ってください。", en:"Please lean back."},
+    {ja:"右に倒してください。", en:"Please lean to the right."},
+    {ja:"左に倒してください。", en:"Please lean to the left."},
+    {ja:"首をゆっくり右に回してください。", en:"Please turn your head slowly to the right."},
+    {ja:"首をゆっくり左に回してください。", en:"Please turn your head slowly to the left."},
+    {ja:"私の手を押し返してください。", en:"Push against my hand, please."},
+    {ja:"そのまま止めてください。", en:"Hold it right there."},
+    {ja:"脚をまっすぐ上げてください。", en:"Please raise your leg, keeping it straight."},
+    {ja:"歩いてみてください。", en:"Could you walk for me, please?"},
+    {ja:"歩き方を撮影してもよろしいですか？ 記録は院内でのみ使用します。", en:"May I record your walking? The video will only be used inside the clinic."}
+  ]},
+  { t:"確認・声かけ", items:[
+    {ja:"痛みますか？", en:"Does that hurt?"},
+    {ja:"ここはどうですか？", en:"How about here?"},
+    {ja:"さっきより楽になりましたか？", en:"Does that feel better than before?"},
+    {ja:"力加減はこれで大丈夫ですか？", en:"Is this pressure all right?"},
+    {ja:"もう少し弱くしましょうか？", en:"Would you like me to go a bit lighter?"},
+    {ja:"もう少し強くしましょうか？", en:"Would you like a bit more pressure?"},
+    {ja:"深呼吸してください。", en:"Take a deep breath."},
+    {ja:"あと少しで終わります。", en:"We're almost done."},
+    {ja:"終わりました。ゆっくり起き上がってください。", en:"All finished. Please sit up slowly."},
+    {ja:"急に起き上がらないでください。めまいが出ることがあります。", en:"Please don't get up too quickly — you might feel light‑headed."},
+    {ja:"お水をどうぞ。", en:"Here's some water for you."}
+  ]}
+]},
+{ id:"after", label:"施術後", icon:"🗒️", groups:[
+  { t:"所見の説明", items:[
+    {ja:"検査の結果をご説明します。", en:"Let me explain what I found."},
+    {ja:"骨盤が左右で傾いています。", en:"Your pelvis is tilted — one side sits higher than the other."},
+    {ja:"背骨のこの部分の動きが硬くなっています。", en:"This part of your spine has become stiff and isn't moving well."},
+    {ja:"首が肩より前に出た姿勢になっています。", en:"Your head sits forward of your shoulders."},
+    {ja:"肩の高さに左右差があります。", en:"There's a difference in the height of your shoulders."},
+    {ja:"筋肉が緊張して、硬くなっています。", en:"The muscles here are tight and have gone into spasm."},
+    {ja:"体重のかけ方が左右で偏っています。", en:"You're putting more weight through one side than the other."},
+    {ja:"長時間の座り姿勢が原因の一つと考えられます。", en:"Long hours of sitting is likely one of the causes."},
+    {ja:"痛みが出ている場所と、原因になっている場所は違うことがあります。", en:"The place that hurts and the place causing it are often not the same."},
+    {ja:"神経の圧迫を疑う所見はありませんでした。", en:"I didn't find anything to suggest a nerve is being compressed."},
+    {ja:"当院は医療機関ではないため、診断はいたしません。あくまで体の使い方と動きの評価です。", en:"We're not a medical clinic, so we don't make diagnoses. This is an assessment of how your body moves and functions."}
+  ]},
+  { t:"経過と通院の目安", items:[
+    {ja:"本日は◯◯を中心に施術しました。", en:"Today I focused mainly on ___."},
+    {ja:"数回の通院で変化が出てくると思います。", en:"You should start noticing changes after a few visits."},
+    {ja:"次回は◯日後をおすすめします。", en:"I'd recommend coming back in ___ days."},
+    {ja:"はじめの数回は間隔を短めに、その後は空けていきます。", en:"We'll start with shorter intervals and then space the visits out."},
+    {ja:"全体で◯回ほどを目安に考えています。", en:"I'd estimate around ___ sessions in total."},
+    {ja:"一度で完全に良くなるものではありません。", en:"This isn't something that resolves completely in a single visit."},
+    {ja:"良くなったあとも、月に1回のメンテナンスをおすすめします。", en:"Once you're better, I'd suggest a maintenance visit about once a month."},
+    {ja:"症状が変わったら、遠慮なくご連絡ください。", en:"If anything changes, please don't hesitate to get in touch."}
+  ]},
+  { t:"施術後の注意", items:[
+    {ja:"施術のあと、だるさや軽い痛みが出ることがあります。1〜2日でおさまります。", en:"You may feel tired or a little sore afterwards. It usually settles within a day or two."},
+    {ja:"今日は長風呂を避けて、シャワー程度にしてください。", en:"Please avoid a long hot bath today — a shower is fine."},
+    {ja:"今日は激しい運動と飲酒は控えてください。", en:"Please avoid intense exercise and alcohol today."},
+    {ja:"水分を多めに取ってください。", en:"Please drink plenty of water."},
+    {ja:"重い物を持たないようにしてください。", en:"Please avoid lifting anything heavy."},
+    {ja:"痛みが強くなったり、しびれが出たりしたら、すぐにご連絡ください。", en:"If the pain gets worse or you develop numbness, please contact us right away."},
+    {ja:"今夜はゆっくり休んでください。", en:"Please take it easy tonight."}
+  ]},
+  { t:"セルフケア指導", items:[
+    {ja:"ご自宅でできる運動をお見せします。", en:"Let me show you an exercise you can do at home."},
+    {ja:"一日◯回、◯秒ずつ行ってください。", en:"Please do this ___ times a day, holding for ___ seconds."},
+    {ja:"痛みが出るところまで伸ばさないでください。", en:"Don't stretch into pain."},
+    {ja:"呼吸を止めないでください。", en:"Remember to keep breathing."},
+    {ja:"30分に一度は立ち上がって動いてください。", en:"Please stand up and move at least once every 30 minutes."},
+    {ja:"温めてください。", en:"Please apply heat to it."},
+    {ja:"冷やしてください。1回15分までにしてください。", en:"Please ice it, for no more than 15 minutes at a time."},
+    {ja:"横向きで寝るときは、膝の間にクッションを挟んでください。", en:"When you sleep on your side, place a cushion between your knees."},
+    {ja:"仰向けで寝るときは、膝の下にクッションを入れてください。", en:"When you sleep on your back, put a cushion under your knees."},
+    {ja:"モニターの高さを目線に合わせてください。", en:"Try to set your monitor at eye level."},
+    {ja:"かかとの高い靴は控えてください。", en:"Please go easy on high‑heeled shoes."},
+    {ja:"動画をお送りしますので、そちらを見ながら行ってください。", en:"I'll send you a video so you can follow along at home."}
+  ]}
+]},
+
+{ id:"payment", label:"会計・予約", icon:"💳", groups:[
+  { t:"お会計", items:[
+    {ja:"本日は◯◯円になります。", en:"That comes to ¥___ today."},
+    {ja:"お支払いは現金、クレジットカード、電子マネーがご利用いただけます。", en:"We accept cash, credit cards, and electronic payment."},
+    {ja:"こちらにカードをお願いします。", en:"Please insert or tap your card here."},
+    {ja:"暗証番号を入力してください。", en:"Please enter your PIN."},
+    {ja:"サインをお願いします。", en:"Please sign here."},
+    {ja:"領収書はご入用ですか？", en:"Would you like a receipt?"},
+    {ja:"保険請求用の明細書をご希望ですか？ 英文でもお出しできます。", en:"Would you like an itemised receipt for an insurance claim? We can issue it in English."},
+    {ja:"回数券もございます。1回あたりのお値段がお得になります。", en:"We also offer a multi‑visit pass — it works out cheaper per session."},
+    {ja:"申し訳ありません、当院では◯◯はお使いいただけません。", en:"I'm sorry, we don't accept ___ here."}
+  ]},
+  { t:"次回のご予約", items:[
+    {ja:"次回のご予約をお取りしますか？", en:"Would you like to book your next appointment?"},
+    {ja:"ご希望の曜日と時間はありますか？", en:"Do you have a preferred day and time?"},
+    {ja:"◯月◯日の◯時はいかがですか？", en:"How about ___ at ___?"},
+    {ja:"あいにくその時間は埋まっております。", en:"I'm afraid that time is already taken."},
+    {ja:"その前後のお時間でしたらご案内できます。", en:"I can offer you a slot just before or just after that."},
+    {ja:"ご予約の確認メールをお送りします。", en:"We'll send you a confirmation email."},
+    {ja:"キャンセルの場合は前日までにご連絡ください。", en:"If you need to cancel, please let us know by the day before."},
+    {ja:"当日キャンセルはキャンセル料をいただく場合がございます。", en:"Same‑day cancellations may incur a fee."},
+    {ja:"LINEやお電話でもご予約いただけます。", en:"You can also book by LINE or by phone."},
+    {ja:"次回はこちらの診察券をお持ちください。", en:"Please bring this clinic card with you next time."}
+  ]},
+  { t:"お見送り", items:[
+    {ja:"本日はありがとうございました。", en:"Thank you very much for coming in today."},
+    {ja:"お大事にどうぞ。", en:"Take care of yourself."},
+    {ja:"お気をつけてお帰りください。", en:"Have a safe trip home."},
+    {ja:"またお待ちしております。", en:"We look forward to seeing you again."},
+    {ja:"何かご不明な点があれば、いつでもご連絡ください。", en:"If anything is unclear, please get in touch any time."}
+  ]}
+]}
+];
+
+/* ---- 患者さん側フレーズ（英語が主） ---- */
+const PT_CATS = [
+{ id:"symptom", label:"症状を伝える", icon:"💢", groups:[
+  { t:"どこが痛いか", items:[
+    {en:"I have pain in my lower back.", ja:"腰が痛いです。"},
+    {en:"I have pain in my upper back.", ja:"背中の上のほうが痛いです。"},
+    {en:"My neck is stiff and sore.", ja:"首が凝って痛いです。"},
+    {en:"My shoulder hurts.", ja:"肩が痛いです。"},
+    {en:"I have a headache.", ja:"頭痛があります。"},
+    {en:"My hip hurts.", ja:"股関節が痛いです。"},
+    {en:"My knee hurts.", ja:"膝が痛いです。"},
+    {en:"My jaw clicks and hurts.", ja:"あごが鳴って痛みます。"},
+    {en:"I have numbness and tingling down my leg.", ja:"脚にしびれがあります。"},
+    {en:"I have numbness in my arm and fingers.", ja:"腕と指がしびれます。"}
+  ]},
+  { t:"いつから・どんなふうに", items:[
+    {en:"It started a few days ago.", ja:"数日前から始まりました。"},
+    {en:"It started about a week ago.", ja:"一週間ほど前から始まりました。"},
+    {en:"I've had it for months.", ja:"何か月も続いています。"},
+    {en:"I've had it for years.", ja:"何年も前からあります。"},
+    {en:"It hurts all the time.", ja:"ずっと痛みます。"},
+    {en:"It comes and goes.", ja:"出たり治まったりします。"},
+    {en:"It hurts when I move.", ja:"動かすと痛みます。"},
+    {en:"It's worse in the morning.", ja:"朝が一番つらいです。"},
+    {en:"It's worse at the end of the day.", ja:"夕方から夜がつらいです。"},
+    {en:"It wakes me up at night.", ja:"夜、痛みで目が覚めます。"},
+    {en:"I injured it playing sports.", ja:"スポーツで痛めました。"},
+    {en:"I was in a car accident.", ja:"交通事故に遭いました。"},
+    {en:"I lifted something heavy.", ja:"重い物を持ち上げました。"},
+    {en:"I don't know what caused it.", ja:"原因は分かりません。"},
+    {en:"I sit at a desk all day.", ja:"一日中デスクワークです。"},
+    {en:"I'm on a long flight home soon.", ja:"もうすぐ長時間のフライトで帰国します。"}
+  ]}
+]},
+{ id:"during_pt", label:"施術中に伝える", icon:"✋", groups:[
+  { t:"すぐ伝えたいこと", items:[
+    {en:"Please stop.", ja:"止めてください。"},
+    {en:"That hurts.", ja:"痛いです。"},
+    {en:"That's too strong.", ja:"強すぎます。"},
+    {en:"Could you go a little lighter, please?", ja:"もう少し弱くしてください。"},
+    {en:"Could you press a bit harder?", ja:"もう少し強くしてください。"},
+    {en:"That feels good.", ja:"気持ちいいです。"},
+    {en:"That's the spot.", ja:"そこです。"},
+    {en:"I feel dizzy.", ja:"めまいがします。"},
+    {en:"I feel sick.", ja:"気分が悪いです。"},
+    {en:"I need a moment.", ja:"少し休ませてください。"},
+    {en:"I'm cold. Could I have a blanket?", ja:"寒いです。ブランケットをもらえますか？"},
+    {en:"I need to use the restroom.", ja:"お手洗いに行きたいです。"}
+  ]},
+  { t:"聞き返す", items:[
+    {en:"Could you say that again, more slowly?", ja:"もう一度、ゆっくり言ってもらえますか？"},
+    {en:"I don't understand.", ja:"分かりません。"},
+    {en:"Could you write it down?", ja:"書いてもらえますか？"},
+    {en:"Could you show me?", ja:"やって見せてもらえますか？"},
+    {en:"Does anyone here speak English?", ja:"英語が話せる方はいますか？"}
+  ]},
+  { t:"答える", items:[
+    {en:"Yes.", ja:"はい。"},
+    {en:"No.", ja:"いいえ。"},
+    {en:"I'm not sure.", ja:"よく分かりません。"},
+    {en:"A little.", ja:"少しです。"},
+    {en:"Yes, a lot.", ja:"とても痛いです。"},
+    {en:"It's better now.", ja:"楽になりました。"},
+    {en:"No change.", ja:"変わりません。"},
+    {en:"It's worse.", ja:"悪くなりました。"}
+  ]}
+]},
+{ id:"ask_pt", label:"質問する", icon:"❓", groups:[
+  { t:"施術について", items:[
+    {en:"Is it safe?", ja:"安全ですか？"},
+    {en:"Will it hurt?", ja:"痛いですか？"},
+    {en:"What are you going to do?", ja:"これから何をするのですか？"},
+    {en:"What's wrong with me?", ja:"私の体はどういう状態ですか？"},
+    {en:"How many sessions will I need?", ja:"何回くらい通う必要がありますか？"},
+    {en:"How long will each session take?", ja:"1回の施術はどのくらいかかりますか？"},
+    {en:"Do I need to see a medical doctor?", ja:"医師の診察を受けたほうがいいですか？"},
+    {en:"Are you a licensed practitioner?", ja:"資格をお持ちですか？"}
+  ]},
+  { t:"施術後の生活", items:[
+    {en:"Can I exercise after this?", ja:"施術後に運動してもいいですか？"},
+    {en:"Can I take a bath today?", ja:"今日はお風呂に入ってもいいですか？"},
+    {en:"Can I go to an onsen today?", ja:"今日、温泉に入ってもいいですか？"},
+    {en:"Can I drink alcohol tonight?", ja:"今夜はお酒を飲んでもいいですか？"},
+    {en:"Is there anything I should avoid?", ja:"避けたほうがいいことはありますか？"},
+    {en:"What exercises should I do at home?", ja:"家でどんな運動をすればいいですか？"},
+    {en:"When should I come back?", ja:"次はいつ来ればいいですか？"}
+  ]},
+  { t:"お金・予約", items:[
+    {en:"How much does it cost?", ja:"費用はいくらですか？"},
+    {en:"Do you accept credit cards?", ja:"クレジットカードは使えますか？"},
+    {en:"Can I get a receipt for my insurance?", ja:"保険用の領収書をもらえますか？"},
+    {en:"Can I get it written in English?", ja:"英語で書いてもらえますか？"},
+    {en:"I'd like to book another appointment.", ja:"次の予約を取りたいです。"},
+    {en:"I need to cancel my appointment.", ja:"予約をキャンセルしたいです。"},
+    {en:"I need to change my appointment.", ja:"予約を変更したいです。"},
+    {en:"Do you have anything on the weekend?", ja:"週末の空きはありますか？"}
+  ]}
+]}
+];
+
+/* =====================================================================
+   BODY CHART GEOMETRY  (前面 / 背面 の2体)
+   座標は1体ぶんのローカル系。背面は +130 平行移動して描画する。
+   左右の呼称: 前面は「向かい合っている」= 画面左が患者の右
+               背面は「後ろから見ている」= 画面左が患者の左
+   ===================================================================== */
+const BODY = [
+  {k:"head",     e:[75,33,13,16]},
+  {k:"neck",     r:[67,48,16,10,5]},
+  {k:"shoulderA",e:[58,64,12,9]},
+  {k:"shoulderB",e:[92,64,12,9]},
+  {k:"chest",    r:[58,57,34,28,9]},
+  {k:"abdomen",  r:[60,86,30,26,9]},
+  {k:"upperarmA",r:[45,70,11,32,5]},
+  {k:"upperarmB",r:[94,70,11,32,5]},
+  {k:"elbowA",   e:[50.5,105,7,6]},
+  {k:"elbowB",   e:[99.5,105,7,6]},
+  {k:"handA",    r:[44,111,11,34,5]},
+  {k:"handB",    r:[95,111,11,34,5]},
+  {k:"pelvis",   r:[58,113,34,20,8]},
+  {k:"thighA",   r:[59,134,15,42,7]},
+  {k:"thighB",   r:[76,134,15,42,7]},
+  {k:"kneeA",    e:[66.5,181,8,7]},
+  {k:"kneeB",    e:[83.5,181,8,7]},
+  {k:"shinA",    r:[60,189,13,42,6]},
+  {k:"shinB",    r:[77,189,13,42,6]},
+  {k:"footA",    r:[58,233,15,11,4]},
+  {k:"footB",    r:[77,233,15,11,4]}
+];
+/* 部位名: [日本語, English] — A/B は左右に展開 */
+const ZONE_NAMES = {
+  front:{
+    head:["頭・顔","Head / face"], neck:["首（前）","Front of neck"],
+    shoulder:["肩","shoulder"], chest:["胸","Chest"], abdomen:["お腹","Abdomen"],
+    upperarm:["上腕","upper arm"], elbow:["肘","elbow"], hand:["前腕・手","forearm / hand"],
+    pelvis:["下腹部・鼠径部","Lower abdomen / groin"],
+    thigh:["太もも","thigh"], knee:["膝","knee"], shin:["すね","shin"], foot:["足","foot"]
+  },
+  back:{
+    head:["後頭部","Back of the head"], neck:["首（後ろ）","Back of neck"],
+    shoulder:["肩甲骨まわり","shoulder blade"], chest:["背中（上部）","Upper back"], abdomen:["背中（中部）","Mid back"],
+    upperarm:["二の腕","upper arm"], elbow:["肘","elbow"], hand:["前腕・手","forearm / hand"],
+    pelvis:["腰・お尻","Lower back / buttocks"],
+    thigh:["もも裏","back of thigh"], knee:["膝裏","back of knee"], shin:["ふくらはぎ","calf"], foot:["かかと","heel"]
+  }
+};
+/* 画面左(A)/右(B) が患者のどちら側か */
+const SIDE_OF = { front:{A:["右","Right"],B:["左","Left"]}, back:{A:["左","Left"],B:["右","Right"]} };
+
+const PAIN_WORDS = [
+  ["痛みなし","No pain"],["ごく軽い","Very mild"],["軽い","Mild"],["少し気になる","Noticeable"],
+  ["中くらい","Moderate"],["それなりに痛い","Fairly painful"],["強い","Strong"],
+  ["かなり強い","Severe"],["非常に強い","Very severe"],["耐えがたい","Almost unbearable"],
+  ["これ以上ない痛み","Worst pain imaginable"]
+];
+
+/* =====================================================================
+   STATE
+   ===================================================================== */
+const WORKER_URL  = "https://kizu-translate.kizuchiro7.workers.dev";
+const CLINIC_KEY  = "kizu-clinic";          /* Worker 側と一致させる簡易キー */
+const LS = {
+  fav:"kizutr.fav", dir:"kizutr.dir", hist:"kizutr.hist"
+};
+const S = {
+  dir: localStorage.getItem(LS.dir) || "staff",   /* staff | pt */
+  tab: "phrases",
+  cat: null,
+  q: "",
+  fav: JSON.parse(localStorage.getItem(LS.fav) || "[]"),
+  hist: JSON.parse(localStorage.getItem(LS.hist) || "[]"),
+  show: { list:[], i:0 },
+  pain: null,
+  zones: new Set(),
+  aiTo: "en",
+  aiBusy: false,
+  aiResult: null
+};
+const cats = () => (S.dir === "staff" ? STAFF_CATS : PT_CATS);
+const $  = (s) => document.querySelector(s);
+const esc = (s) => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const keyOf = (p) => (p.ja + "|" + p.en);
+const save = () => { localStorage.setItem(LS.fav, JSON.stringify(S.fav)); };
+
+function toast(msg, ms){
+  const t = $("#toast"); t.innerHTML = msg; t.classList.add("on");
+  clearTimeout(toast._t); toast._t = setTimeout(()=>t.classList.remove("on"), ms || 1900);
+}
+
+/* =====================================================================
+   SPEECH SYNTHESIS
+   ===================================================================== */
+let VOICES = [];
+function loadVoices(){ try{ VOICES = speechSynthesis.getVoices() || []; }catch(e){ VOICES = []; } }
+if ("speechSynthesis" in window){
+  loadVoices();
+  speechSynthesis.addEventListener("voiceschanged", loadVoices);
+}
+function pickVoice(lang){
+  const want = lang === "ja" ? "ja" : "en";
+  const pool = VOICES.filter(v => (v.lang||"").toLowerCase().startsWith(want));
+  if (!pool.length) return null;
+  /* 端末内蔵の自然な声を優先 */
+  const pref = want === "ja"
+    ? ["Kyoko","O-Ren","Otoya","Google 日本語","Microsoft Nanami","Microsoft Ayumi"]
+    : ["Samantha","Ava","Karen","Daniel","Google US English","Microsoft Aria","Microsoft Jenny"];
+  for (const name of pref){ const hit = pool.find(v => (v.name||"").includes(name)); if (hit) return hit; }
+  return pool.find(v => v.localService) || pool[0];
+}
+function speak(text, lang){
+  if (!("speechSynthesis" in window)) { toast("この端末は読み上げに対応していません"); return; }
+  try{
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(String(text).replace(/[◯_]{2,}|◯|＿+/g, ""));
+    const v = pickVoice(lang);
+    if (v) u.voice = v;
+    u.lang = lang === "ja" ? "ja-JP" : "en-US";
+    u.rate = lang === "ja" ? 0.95 : 0.9;   /* 患者向けにやや遅め */
+    u.pitch = 1;
+    speechSynthesis.speak(u);
+  }catch(e){ toast("読み上げに失敗しました"); }
+}
+
+/* =====================================================================
+   BIG DISPLAY OVERLAY
+   ===================================================================== */
+function openShow(list, i){
+  S.show = { list, i };
+  renderShow();
+  $("#show").classList.add("on");
+}
+function closeShow(){ $("#show").classList.remove("on"); try{ speechSynthesis.cancel(); }catch(e){} }
+function renderShow(){
+  const p = S.show.list[S.show.i];
+  if (!p) return closeShow();
+  /* 主言語 = 相手に見せる言語 */
+  const mainLang = S.dir === "staff" ? "en" : "ja";
+  const subLang  = mainLang === "en" ? "ja" : "en";
+  const L = { en:["ENGLISH","en"], ja:["日本語","ja"] };
+  const block = (lang, cls) => `
+    <div class="bigblock ${cls}">
+      <div class="lang"><span>${L[lang][0]}</span>
+        <button class="spk" data-spk="${lang}">🔊 ${lang==="ja"?"読み上げ":"Speak"}</button></div>
+      <div class="txt">${esc(p[lang])}</div>
+    </div>`;
+  $("#showBody").innerHTML =
+    block(mainLang, "mainblk") + block(subLang, "");
+  $("#showFav").textContent = S.fav.includes(keyOf(p)) ? "★ 登録済み" : "☆ よく使う";
+  $("#showPrev").disabled = S.show.i === 0;
+  $("#showNext").disabled = S.show.i >= S.show.list.length - 1;
+  $("#showBody").querySelectorAll("[data-spk]").forEach(b =>
+    b.onclick = () => speak(p[b.dataset.spk], b.dataset.spk));
+}
+
+/* =====================================================================
+   RENDER — フレーズ一覧
+   ===================================================================== */
+function priSec(p){
+  /* pri = 使う人が読む言語 / sec = 相手に見せる言語 */
+  return S.dir === "staff" ? [p.ja, p.en] : [p.en, p.ja];
+}
+function cardHTML(p, idx, warn){
+  const [pri, sec] = priSec(p);
+  const on = S.fav.includes(keyOf(p));
+  return `<button class="pcard${warn?" warn":""}" data-i="${idx}">
+      <span class="ptext"><span class="pri">${esc(pri)}</span><span class="sec">${esc(sec)}</span>${
+        p.note && S.dir === "staff" ? `<span class="note">🔒 ${esc(p.note)}</span>` : ""}</span>
+      <span class="fav${on?" on":""}" data-fav="${idx}">${on?"★":"☆"}</span>
+    </button>`;
+}
+function bindList(root, list){
+  root.querySelectorAll(".pcard").forEach(el => {
+    el.onclick = (ev) => {
+      const favBtn = ev.target.closest("[data-fav]");
+      const i = +el.dataset.i;
+      if (favBtn){ ev.stopPropagation(); toggleFav(list[i]); render(); return; }
+      openShow(list, i);
+    };
+  });
+}
+function toggleFav(p){
+  const k = keyOf(p); const at = S.fav.indexOf(k);
+  if (at >= 0){ S.fav.splice(at,1); toast("よく使うから外しました"); }
+  else { S.fav.push(k); toast("★ よく使うに追加しました"); }
+  save();
+}
+function allPhrases(){
+  const out = [];
+  for (const c of cats()) for (const g of c.groups) for (const it of g.items)
+    out.push(Object.assign({}, it, {_cat:c.label, _warn:!!g.warn}));
+  return out;
+}
+
+function renderPhrases(){
+  const main = $("#main");
+  const cs = cats();
+  if (!S.cat || !cs.some(c => c.id === S.cat)) S.cat = cs[0].id;
+
+  /* --- 検索モード --- */
+  if (S.q.trim()){
+    const q = S.q.trim().toLowerCase();
+    const hits = allPhrases().filter(p =>
+      p.ja.toLowerCase().includes(q) || p.en.toLowerCase().includes(q));
+    main.innerHTML = hits.length
+      ? `<div class="gtitle">検索結果 ${hits.length}件</div><div class="plist" id="plist">
+           ${hits.map((p,i)=>cardHTML(p,i,p._warn)).join("")}</div>`
+      : `<div class="empty">「${esc(S.q)}」に一致するフレーズはありません。<br>AI翻訳タブで自由に翻訳できます。</div>`;
+    if (hits.length) bindList($("#plist"), hits);
+    return;
+  }
+
+  /* --- カテゴリ表示 --- */
+  const cat = cs.find(c => c.id === S.cat);
+  const flat = [];
+  let html = `<div class="chips">${cs.map(c =>
+    `<button class="chip" data-cat="${c.id}" aria-pressed="${c.id===S.cat}">${c.icon} ${esc(c.label)}</button>`
+  ).join("")}</div>`;
+  for (const g of cat.groups){
+    html += `<div class="gtitle">${esc(g.t)}</div><div class="plist">`;
+    for (const it of g.items){ flat.push(it); html += cardHTML(it, flat.length-1, !!g.warn); }
+    html += `</div>`;
+  }
+  main.innerHTML = html;
+  main.querySelectorAll("[data-cat]").forEach(b =>
+    b.onclick = () => { S.cat = b.dataset.cat; render(); $("#main").scrollTop = 0; });
+  bindList(main, flat);
+}
+
+function renderFav(){
+  const main = $("#main");
+  const list = allPhrases().filter(p => S.fav.includes(keyOf(p)));
+  if (!list.length){
+    main.innerHTML = `<div class="empty">まだ登録がありません。<br>フレーズの右の <b>☆</b> をタップすると、<br>よく使うフレーズをここに集められます。</div>`;
+    return;
+  }
+  main.innerHTML = `<div class="gtitle">よく使うフレーズ ${list.length}件</div>
+    <div class="plist" id="plist">${list.map((p,i)=>cardHTML(p,i,p._warn)).join("")}</div>`;
+  bindList($("#plist"), list);
+}
+
+/* =====================================================================
+   RENDER — AI翻訳
+   ===================================================================== */
+function renderAi(){
+  const r = S.aiResult;
+  $("#main").innerHTML = `
+    <div class="aibox">
+      <textarea id="aiIn" placeholder="${S.aiTo==="en"?"日本語を入力（またはマイクで話す）":"Type or speak in English"}"
+        autocapitalize="sentences" autocorrect="on">${esc($("#aiIn")?$("#aiIn").value:"")}</textarea>
+      <div class="airow">
+        <button class="mic" id="aiMic" aria-label="音声入力">🎙</button>
+        <div class="grow">
+          <button class="btn" id="aiSwap">${S.aiTo==="en"?"日本語 → English":"English → 日本語"} ⇄</button>
+        </div>
+        <button class="btn pri" id="aiGo">翻訳</button>
+      </div>
+    </div>
+    ${r ? `<div class="result">
+        <div class="lang">${r.to==="en"?"ENGLISH":"日本語"}</div>
+        <div class="txt">${esc(r.text)}</div>
+        <div class="acts">
+          <button id="rSpeak">🔊 読み上げ</button>
+          <button id="rBig">大きく表示</button>
+          <button id="rCopy">コピー</button>
+        </div>
+      </div>` : ""}
+    <div class="hint">定型フレーズにない内容を、その場で翻訳します。医療的な判断は必ずご自身で確認してください。<br>
+      通信が必要です（オフラインではフレーズ集のみ使えます）。</div>
+    ${S.hist.length ? `<div class="hist"><div class="gtitle">最近の翻訳</div>
+      ${S.hist.slice(0,8).map((h,i)=>`<div class="hitem" data-h="${i}">
+        <div class="a">${esc(h.src)}</div><div class="b">${esc(h.text)}</div></div>`).join("")}</div>` : ""}
+  `;
+  const inp = $("#aiIn");
+  $("#aiSwap").onclick = () => { S.aiTo = S.aiTo === "en" ? "ja" : "en"; render(); };
+  $("#aiGo").onclick   = () => doTranslate(inp.value);
+  $("#aiMic").onclick  = () => micToggle(inp);
+  inp.addEventListener("keydown", e => {
+    if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) { e.preventDefault(); doTranslate(inp.value); }
+  });
+  if (r){
+    $("#rSpeak").onclick = () => speak(r.text, r.to);
+    $("#rCopy").onclick  = () => { navigator.clipboard.writeText(r.text).then(()=>toast("コピーしました")); };
+    $("#rBig").onclick   = () => openShow([{ja: r.to==="ja"?r.text:r.src, en: r.to==="en"?r.text:r.src}], 0);
+  }
+  $("#main").querySelectorAll("[data-h]").forEach(el => el.onclick = () => {
+    const h = S.hist[+el.dataset.h];
+    S.aiResult = h; S.aiTo = h.to; render(); $("#aiIn").value = h.src;
+  });
+}
+
+async function doTranslate(text){
+  text = (text || "").trim();
+  if (!text) { toast("翻訳する文章を入力してください"); return; }
+  if (S.aiBusy) return;
+  S.aiBusy = true;
+  const btn = $("#aiGo"); if (btn){ btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>'; }
+  try{
+    const res = await fetch(WORKER_URL, {
+      method:"POST",
+      headers:{ "Content-Type":"application/json", "X-Clinic-Key": CLINIC_KEY },
+      body: JSON.stringify({ text, to: S.aiTo, context:"chiropractic_clinic" })
+    });
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    const data = await res.json();
+    if (!data.translation) throw new Error("empty");
+    S.aiResult = { src:text, text:data.translation, to:S.aiTo };
+    S.hist.unshift(S.aiResult);
+    S.hist = S.hist.slice(0, 30);
+    localStorage.setItem(LS.hist, JSON.stringify(S.hist));
+    render();
+    $("#aiIn").value = text;
+  }catch(err){
+    toast(navigator.onLine ? "翻訳に失敗しました。もう一度お試しください" : "オフラインです。フレーズ集をお使いください", 2600);
+  }finally{
+    S.aiBusy = false;
+    const b = $("#aiGo"); if (b){ b.disabled = false; b.textContent = "翻訳"; }
+  }
+}
+
+/* --- 音声入力 --- */
+let REC = null;
+function micToggle(inp){
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR){ toast("この端末は音声入力に対応していません", 2400); return; }
+  if (REC){ REC.stop(); return; }
+  const rec = new SR();
+  rec.lang = S.aiTo === "en" ? "ja-JP" : "en-US";   /* 入力言語 = 翻訳元 */
+  rec.interimResults = true;
+  rec.continuous = false;
+  let finalText = "";
+  rec.onstart = () => { REC = rec; $("#aiMic").classList.add("rec"); toast(rec.lang === "ja-JP" ? "日本語で話してください" : "Please speak in English"); };
+  rec.onresult = (e) => {
+    let interim = "";
+    for (let i = e.resultIndex; i < e.results.length; i++){
+      const t = e.results[i][0].transcript;
+      if (e.results[i].isFinal) finalText += t; else interim += t;
+    }
+    inp.value = finalText + interim;
+  };
+  rec.onerror = (e) => { toast(e.error === "not-allowed" ? "マイクの使用が許可されていません" : "音声入力に失敗しました", 2400); };
+  rec.onend = () => { REC = null; $("#aiMic") && $("#aiMic").classList.remove("rec"); if (inp.value.trim()) doTranslate(inp.value); };
+  try{ rec.start(); }catch(e){ toast("音声入力を開始できませんでした"); }
+}
+
+/* =====================================================================
+   RENDER — 問診ツール（人体図 / 痛みスケール / 選択式問診）
+   ===================================================================== */
+const CHOICE_TOOLS = [
+  { id:"quality", h:"痛みの種類", hEn:"Type of pain",
+    sub:"患者さんに画面を見せて、当てはまるものをタップしてもらいます",
+    q:["どんな痛みですか？","How would you describe the pain?"],
+    opts:[["ズキズキする","Throbbing"],["鋭い・刺すような","Sharp / stabbing"],["鈍い・重い","Dull / aching"],
+          ["焼けるような","Burning"],["しびれる・ピリピリ","Numb / tingling"],["張っている・突っ張る","Tight / pulling"],
+          ["こわばる","Stiff"],["ズキンと走る","Shooting"]] },
+  { id:"onset", h:"いつから", hEn:"When it started",
+    sub:"発症時期を患者さんに選んでもらいます",
+    q:["いつから症状がありますか？","How long have you had this?"],
+    opts:[["今日から","Since today"],["2〜3日前から","2–3 days"],["1週間ほど前から","About a week"],
+          ["1か月ほど前から","About a month"],["数か月前から","A few months"],["半年以上前から","More than six months"],
+          ["何年も前から","Years"],["よく分からない","I'm not sure"]] },
+  { id:"trend", h:"経過", hEn:"Trend",
+    sub:"前回来院時と比べてどうかを確認します",
+    q:["前回と比べてどうですか？","Compared with last time, how is it?"],
+    opts:[["とても良くなった","Much better"],["少し良くなった","A little better"],["変わらない","About the same"],
+          ["少し悪くなった","A little worse"],["とても悪くなった","Much worse"]] }
+];
+
+function renderTools(){
+  const main = $("#main");
+  const figure = (view, dx) => {
+    const N = ZONE_NAMES[view], SD = SIDE_OF[view];
+    const shapes = BODY.map(z => {
+      const sd = /[AB]$/.test(z.k) ? z.k.slice(-1) : null;
+      const base = sd ? z.k.slice(0,-1) : z.k;
+      const id = view + ":" + z.k;
+      const nm = N[base] || ["?","?"];
+      const label = sd ? SD[sd][0] + nm[0] : nm[0];
+      const labelEn = sd ? SD[sd][1] + " " + nm[1] : nm[1];
+      const sel = S.zones.has(id) ? " sel" : "";
+      const attrs = `class="zone${sel}" data-zone="${id}" data-ja="${esc(label)}" data-en="${esc(labelEn)}"`;
+      return z.e
+        ? `<ellipse ${attrs} cx="${z.e[0]}" cy="${z.e[1]}" rx="${z.e[2]}" ry="${z.e[3]}"/>`
+        : `<rect ${attrs} x="${z.r[0]}" y="${z.r[1]}" width="${z.r[2]}" height="${z.r[3]}" rx="${z.r[4]}"/>`;
+    }).join("");
+    return `<g transform="translate(${dx},0)">${shapes}
+      <text class="lbl" x="75" y="258" text-anchor="middle">${view==="front"?"前面 Front":"背面 Back"}</text></g>`;
+  };
+  main.innerHTML = `
+    <div class="tool">
+      <h3>人体図で部位を指す</h3>
+      <div class="sub">患者さんに画面を渡して、つらいところをタップしてもらいます。もう一度タップで解除。</div>
+      <svg class="bodychart" viewBox="36 8 214 262" xmlns="http://www.w3.org/2000/svg">
+        ${figure("front", 0)}${figure("back", 130)}
+      </svg>
+      <div class="selout" id="zoneOut"></div>
+      <div style="display:flex;gap:8px;margin-top:10px">
+        <button class="btn" id="zoneSpeak" style="flex:1">🔊 読み上げ</button>
+        <button class="btn" id="zoneBig" style="flex:1">🔍 大きく表示</button>
+      </div>
+      <div style="text-align:right;margin-top:8px">
+        <button id="zoneClear" style="font-size:12.5px;font-weight:600;color:var(--ink-2);padding:6px 4px">選択をクリア</button>
+      </div>
+    </div>
+
+    <div class="tool">
+      <h3>痛みの強さ（0〜10）</h3>
+      <div class="sub">Pain scale — 患者さんにタップしてもらいます</div>
+      <div class="scale" id="scale">
+        ${PAIN_WORDS.map((w,i)=>`<button data-p="${i}" aria-pressed="${S.pain===i}">${i}</button>`).join("")}
+      </div>
+      <div class="scalelegend"><span>0 = 痛みなし / No pain</span><span>10 = 最悪 / Worst</span></div>
+      <div class="selout" id="painOut"></div>
+    </div>
+
+    ${CHOICE_TOOLS.map(t => `
+    <div class="tool">
+      <h3>${esc(t.h)} <span style="font-weight:500;color:var(--ink-2);font-size:12px">${esc(t.hEn)}</span></h3>
+      <div class="sub">${esc(t.sub)}</div>
+      <button class="pcard" data-ask="${t.id}" style="margin-bottom:10px">
+        <span class="ptext"><span class="pri">${esc(t.q[0])}</span><span class="sec">${esc(t.q[1])}</span></span>
+        <span class="fav">🔍</span>
+      </button>
+      <div class="plist">
+        ${t.opts.map((o,i)=>`<button class="pcard" data-opt="${t.id}:${i}">
+          <span class="ptext"><span class="pri">${esc(o[0])}</span><span class="sec">${esc(o[1])}</span></span>
+        </button>`).join("")}
+      </div>
+    </div>`).join("")}
+  `;
+
+  /* --- 人体図 --- */
+  const paintZones = () => {
+    const picked = [];
+    main.querySelectorAll("[data-zone]").forEach(el => {
+      const on = S.zones.has(el.dataset.zone);
+      el.classList.toggle("sel", on);
+      if (on) picked.push([el.dataset.ja, el.dataset.en]);
+    });
+    $("#zoneOut").innerHTML = picked.length
+      ? `<b>${picked.map(p=>esc(p[0])).join("、")}</b><br>${picked.map(p=>esc(p[1])).join(", ")}`
+      : `<span style="color:var(--ink-2)">まだ選択されていません / Nothing selected yet</span>`;
+    return picked;
+  };
+  main.querySelectorAll("[data-zone]").forEach(el => el.addEventListener("click", () => {
+    const id = el.dataset.zone;
+    S.zones.has(id) ? S.zones.delete(id) : S.zones.add(id);
+    paintZones();
+  }));
+  paintZones();
+  const zoneText = () => {
+    const p = [];
+    main.querySelectorAll("[data-zone]").forEach(el => {
+      if (S.zones.has(el.dataset.zone)) p.push([el.dataset.ja, el.dataset.en]);
+    });
+    return p;
+  };
+  $("#zoneClear").onclick = () => { S.zones.clear(); paintZones(); };
+  $("#zoneSpeak").onclick = () => {
+    const p = zoneText(); if (!p.length) return toast("部位を選んでください");
+    speak(S.dir === "staff" ? p.map(x=>x[1]).join(", ") : p.map(x=>x[0]).join("、"), S.dir==="staff"?"en":"ja");
+  };
+  $("#zoneBig").onclick = () => {
+    const p = zoneText(); if (!p.length) return toast("部位を選んでください");
+    openShow([{ ja:"つらいのはこちらですね：" + p.map(x=>x[0]).join("、"),
+                en:"So the problem areas are: " + p.map(x=>x[1]).join(", ") }], 0);
+  };
+
+  /* --- 痛みスケール --- */
+  const paintPain = () => {
+    main.querySelectorAll("[data-p]").forEach(b => b.setAttribute("aria-pressed", S.pain === +b.dataset.p));
+    $("#painOut").innerHTML = S.pain === null
+      ? `<span style="color:var(--ink-2)">未選択 / Not selected</span>`
+      : `<b>${S.pain} / 10 — ${esc(PAIN_WORDS[S.pain][0])}</b><br>${esc(PAIN_WORDS[S.pain][1])}`;
+  };
+  main.querySelectorAll("[data-p]").forEach(b => b.onclick = () => { S.pain = +b.dataset.p; paintPain(); });
+  paintPain();
+
+  /* --- 選択式問診 --- */
+  main.querySelectorAll("[data-ask]").forEach(b => b.onclick = () => {
+    const t = CHOICE_TOOLS.find(x => x.id === b.dataset.ask);
+    openShow([{ja:t.q[0], en:t.q[1]}], 0);
+  });
+  main.querySelectorAll("[data-opt]").forEach(b => b.onclick = () => {
+    const [id, i] = b.dataset.opt.split(":");
+    const t = CHOICE_TOOLS.find(x => x.id === id);
+    const o = t.opts[+i];
+    openShow([{ja:o[0], en:o[1]}], 0);
+  });
+}
+
+/* =====================================================================
+   RENDER dispatcher + wiring
+   ===================================================================== */
+function render(){
+  $("#searchwrap").classList.toggle("on", S.tab === "phrases");
+  $("#dirStaff").setAttribute("aria-pressed", S.dir === "staff");
+  $("#dirPt").setAttribute("aria-pressed", S.dir === "pt");
+  for (const [tab, el] of Object.entries({phrases:"#tabPhrases", ai:"#tabAi", tools:"#tabTools", fav:"#tabFav"}))
+    $(el).setAttribute("aria-pressed", S.tab === tab);
+  if (S.tab === "phrases") renderPhrases();
+  else if (S.tab === "ai")  renderAi();
+  else if (S.tab === "tools") renderTools();
+  else renderFav();
+}
+function go(tab){ S.tab = tab; render(); $("#main").scrollTop = 0; }
+
+$("#tabPhrases").onclick = () => go("phrases");
+$("#tabAi").onclick      = () => go("ai");
+$("#tabTools").onclick   = () => go("tools");
+$("#tabFav").onclick     = () => go("fav");
+$("#dirStaff").onclick   = () => { S.dir = "staff"; S.cat = null; localStorage.setItem(LS.dir, S.dir); render(); };
+$("#dirPt").onclick      = () => { S.dir = "pt";    S.cat = null; localStorage.setItem(LS.dir, S.dir); render(); };
+$("#q").addEventListener("input", e => { S.q = e.target.value; renderPhrases(); });
+$("#qx").onclick = () => { $("#q").value = ""; S.q = ""; renderPhrases(); };
+
+$("#showClose").onclick = closeShow;
+$("#showPrev").onclick  = () => { if (S.show.i > 0){ S.show.i--; renderShow(); } };
+$("#showNext").onclick  = () => { if (S.show.i < S.show.list.length-1){ S.show.i++; renderShow(); } };
+$("#showSpeak").onclick = () => {
+  const p = S.show.list[S.show.i];
+  speak(S.dir === "staff" ? p.en : p.ja, S.dir === "staff" ? "en" : "ja");
+};
+$("#showFav").onclick = () => { toggleFav(S.show.list[S.show.i]); renderShow(); render(); };
+document.addEventListener("keydown", e => { if (e.key === "Escape") closeShow(); });
+
+/* 大きく表示中のスワイプで前後移動 */
+(function(){
+  let x0 = null;
+  const el = $("#show");
+  el.addEventListener("touchstart", e => { x0 = e.touches[0].clientX; }, {passive:true});
+  el.addEventListener("touchend", e => {
+    if (x0 === null) return;
+    const dx = e.changedTouches[0].clientX - x0; x0 = null;
+    if (Math.abs(dx) < 60) return;
+    if (dx < 0 && S.show.i < S.show.list.length-1){ S.show.i++; renderShow(); }
+    if (dx > 0 && S.show.i > 0){ S.show.i--; renderShow(); }
+  }, {passive:true});
+})();
+
+render();
+
+/* Service worker (オフライン動作) */
+if ("serviceWorker" in navigator){
+  window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(()=>{}));
+}
+</script>
+</body>
+</html>
