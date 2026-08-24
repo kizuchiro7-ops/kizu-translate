@@ -190,6 +190,33 @@ svg.bodychart .lbl{fill:var(--ink-2);font-size:9px;font-weight:600;pointer-event
 .selout{margin-top:10px;font-size:13px;line-height:1.7;background:var(--bg);border-radius:10px;padding:10px 12px;min-height:44px}
 .selout b{color:var(--brand)}
 
+/* ---------- 会話モード ---------- */
+.convrow{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:12px}
+.conv{padding:15px 11px;border-radius:15px;background:var(--card);border:1px solid var(--line);
+  box-shadow:var(--shadow);text-align:center;display:flex;flex-direction:column;gap:3px}
+.conv .ci{font-size:23px;line-height:1.1}
+.conv .ct{font-size:14px;font-weight:700}
+.conv .cs{font-size:10.5px;color:var(--ink-2);font-weight:600}
+.conv:active{transform:scale(.98)}
+.conv.pt{background:var(--brand);border-color:var(--brand);color:var(--brand-ink)}
+.conv.pt .cs{color:var(--brand-ink);opacity:.8}
+
+#listen{position:fixed;inset:0;z-index:70;background:var(--brand);color:var(--brand-ink);
+  display:none;flex-direction:column;align-items:center;justify-content:center;
+  padding:calc(var(--safe-t) + 20px) 22px calc(var(--safe-b) + 22px);text-align:center}
+#listen.on{display:flex}
+#listenCancel{position:absolute;top:calc(var(--safe-t) + 12px);right:16px;font-size:22px;
+  color:var(--brand-ink);opacity:.75;padding:10px}
+#listen .lwrap{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;width:100%}
+#listen .lmic{font-size:60px;line-height:1;animation:pulse 1.3s infinite}
+#listen .lmic.thinking{animation:spin 1.1s linear infinite}
+#listen .lmain{font-size:30px;font-weight:700;line-height:1.3}
+#listen .lsub{font-size:15px;opacity:.85;line-height:1.55;max-width:22em}
+#listen .lheard{font-size:17px;font-weight:600;line-height:1.5;min-height:2.6em;
+  background:rgba(255,255,255,.14);border-radius:14px;padding:12px 14px;width:100%;max-width:26em}
+#listen .lstop{width:100%;max-width:26em;padding:16px;border-radius:14px;
+  background:var(--brand-ink);color:var(--brand);font-weight:800;font-size:15px}
+
 /* ---------- Toast ---------- */
 #toast{
   position:fixed;left:50%;bottom:calc(var(--safe-b) + 76px);transform:translateX(-50%) translateY(14px);
@@ -241,6 +268,17 @@ svg.bodychart .lbl{fill:var(--ink-2);font-size:9px;font-weight:600;pointer-event
     <button class="pri" id="showSpeak">🔊 読み上げ</button>
     <button id="showNext">次 →</button>
   </div>
+</div>
+
+<div id="listen" role="dialog" aria-modal="true">
+  <button id="listenCancel">✕</button>
+  <div class="lwrap">
+    <div class="lmic" id="listenMic">🎙</div>
+    <div class="lmain" id="listenMain"></div>
+    <div class="lsub"  id="listenSub"></div>
+    <div class="lheard" id="listenHeard"></div>
+  </div>
+  <button class="lstop" id="listenStop">聞き取りを終える / Done</button>
 </div>
 
 <div id="toast"></div>
@@ -894,11 +932,15 @@ function setAuto(on){
 /* =====================================================================
    BIG DISPLAY OVERLAY
    ===================================================================== */
-function openShow(list, i){
-  S.show = { list, i };
+/* opt.main = 大きく出す言語 / opt.speak = 自動で読み上げる言語。
+   会話モードでは「向き」がヘッダの設定と一致しないので明示的に渡す。 */
+function openShow(list, i, opt){
+  S.show = { list, i, main: (opt && opt.main) || null, speak: (opt && opt.speak) || null,
+             conv: !!(opt && opt.conv) };
   renderShow();
   $("#show").classList.add("on");
-  autoSpeak(filled(list[i])[outLang()], outLang());
+  const sl = S.show.speak || outLang();
+  autoSpeak(filled(list[i])[sl], sl);
 }
 function closeShow(){ $("#show").classList.remove("on"); try{ speechSynthesis.cancel(); }catch(e){} }
 function renderShow(){
@@ -906,7 +948,7 @@ function renderShow(){
   if (!p) return closeShow();
   const f = filled(p);
   /* 主言語 = 相手に見せる言語 */
-  const mainLang = S.dir === "staff" ? "en" : "ja";
+  const mainLang = S.show.main || (S.dir === "staff" ? "en" : "ja");
   const subLang  = mainLang === "en" ? "ja" : "en";
   const L = { en:"ENGLISH", ja:"日本語" };
   const block = (lang, cls) => `
@@ -941,8 +983,17 @@ function renderShow(){
   $("#showFav").textContent = S.fav.includes(keyOf(p)) ? "★ 登録済み" : "☆ よく使う";
   $("#showAuto").setAttribute("aria-pressed", S.auto);
   $("#showAuto").textContent = S.auto ? "🔊 自動" : "🔇 自動";
-  $("#showPrev").disabled = S.show.i === 0;
-  $("#showNext").disabled = S.show.i >= S.show.list.length - 1;
+  if (S.show.conv){
+    /* 会話モード: 前後送りの代わりに「次に誰が話すか」を出して往復できるようにする */
+    $("#showPrev").disabled = false; $("#showNext").disabled = false;
+    $("#showPrev").textContent = "🎙 日本語";
+    $("#showNext").textContent = "🎙 English";
+  } else {
+    $("#showPrev").textContent = "← 前";
+    $("#showNext").textContent = "次 →";
+    $("#showPrev").disabled = S.show.i === 0;
+    $("#showNext").disabled = S.show.i >= S.show.list.length - 1;
+  }
 }
 
 /* =====================================================================
@@ -1095,6 +1146,17 @@ function renderFav(){
 function renderAi(){
   const r = S.aiResult;
   $("#main").innerHTML = `
+    ${(window.SpeechRecognition || window.webkitSpeechRecognition) ? `
+    <div class="convrow">
+      <button class="conv" data-conv="ja">
+        <span class="ci">🎙</span><span class="ct">日本語で話す</span><span class="cs">→ English で伝える</span></button>
+      <button class="conv pt" data-conv="en">
+        <span class="ci">🎙</span><span class="ct">Patient speaks</span><span class="cs">English → 日本語</span></button>
+    </div>` : `
+    <div class="hint" style="background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:13px;margin-bottom:12px">
+      このブラウザは音声入力に対応していないため、会話モードは使えません。<br>
+      下の入力欄にキーボードで入力すれば翻訳できます。
+    </div>`}
     <div class="aibox">
       <textarea id="aiIn" placeholder="${S.aiTo==="en"?"日本語を入力（またはマイクで話す）":"Type or speak in English"}"
         autocapitalize="sentences" autocorrect="on">${esc($("#aiIn")?$("#aiIn").value:"")}</textarea>
@@ -1126,6 +1188,8 @@ function renderAi(){
       ${S.hist.slice(0,8).map((h,i)=>`<div class="hitem" data-h="${i}">
         <div class="a">${esc(h.src)}</div><div class="b">${esc(h.text)}</div></div>`).join("")}</div>` : ""}
   `;
+  $("#main").querySelectorAll("[data-conv]").forEach(b =>
+    b.onclick = () => startConversation(b.dataset.conv));
   const inp = $("#aiIn");
   $("#aiSwap").onclick = () => { S.aiTo = S.aiTo === "en" ? "ja" : "en"; render(); };
   $("#aiGo").onclick   = () => doTranslate(inp.value);
@@ -1149,10 +1213,11 @@ function renderAi(){
   });
 }
 
-async function doTranslate(text){
+async function doTranslate(text, opts){
+  const quiet = opts && opts.quiet;      /* 会話モードは自前で画面を出すので再描画しない */
   text = (text || "").trim();
-  if (!text) { toast("翻訳する文章を入力してください"); return; }
-  if (S.aiBusy) return;
+  if (!text) { toast("翻訳する文章を入力してください"); return null; }
+  if (S.aiBusy) return null;
   S.aiBusy = true;
   const btn = $("#aiGo"); if (btn){ btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>'; }
   try{
@@ -1168,16 +1233,110 @@ async function doTranslate(text){
     S.hist.unshift(S.aiResult);
     S.hist = S.hist.slice(0, 30);
     localStorage.setItem(LS.hist, JSON.stringify(S.hist));
-    render();
-    $("#aiIn").value = text;
-    autoSpeak(S.aiResult.text, S.aiTo);
+    if (!quiet){
+      render();
+      $("#aiIn").value = text;
+      autoSpeak(S.aiResult.text, S.aiTo);
+    }
+    return data.translation;
   }catch(err){
     toast(navigator.onLine ? "翻訳に失敗しました。もう一度お試しください" : "オフラインです。フレーズ集をお使いください", 2600);
+    return null;
   }finally{
     S.aiBusy = false;
     const b = $("#aiGo"); if (b){ b.disabled = false; b.textContent = "翻訳"; }
   }
 }
+
+/* ---------------------------------------------------------------------
+   会話モード
+   端末を患者さんに渡して、そのまま話してもらうための流れ。
+   話す → 聞き取り → 翻訳 → 両言語を大きく表示 → 訳文を読み上げ、まで一気に進む。
+   --------------------------------------------------------------------- */
+const LISTEN_UI = {
+  en: { main:"Please speak now",
+        sub:"Tell us what's bothering you — where it hurts, when it started, anything you want us to know.",
+        note:"患者さんに端末を渡して話してもらってください" },
+  ja: { main:"お話しください",
+        sub:"話し終わると自動で英語に翻訳して、読み上げます。",
+        note:"Speaking in Japanese — it will be translated into English." }
+};
+function openListen(src){
+  const t = LISTEN_UI[src];
+  $("#listenMain").textContent = t.main;
+  $("#listenSub").innerHTML = esc(t.sub) + `<br><span style="opacity:.7;font-size:13px">${esc(t.note)}</span>`;
+  $("#listenHeard").textContent = "";
+  $("#listenMic").textContent = "🎙";
+  $("#listenMic").classList.remove("thinking");
+  $("#listenStop").style.visibility = "visible";
+  $("#listen").classList.add("on");
+}
+function closeListen(){ $("#listen").classList.remove("on"); }
+
+let CONV = null;   /* 実行中の SpeechRecognition */
+function startConversation(src){
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR){ toast("この端末は音声入力に対応していません。キーボード入力をお使いください", 3000); return; }
+  if (CONV){ try{ CONV.abort(); }catch(e){} CONV = null; }
+  primeSpeech();                     /* 訳文の自動読み上げのために解錠しておく */
+  try{ speechSynthesis.cancel(); }catch(e){}
+
+  const dst = src === "ja" ? "en" : "ja";
+  openListen(src);
+
+  const rec = new SR();
+  rec.lang = src === "ja" ? "ja-JP" : "en-US";
+  rec.interimResults = true;
+  rec.continuous = false;
+  let finalText = "", cancelled = false;
+
+  rec.onstart  = () => { CONV = rec; };
+  rec.onresult = (e) => {
+    let interim = "";
+    for (let i = e.resultIndex; i < e.results.length; i++){
+      const t = e.results[i][0].transcript;
+      if (e.results[i].isFinal) finalText += t; else interim += t;
+    }
+    $("#listenHeard").textContent = finalText + interim;
+  };
+  rec.onerror = (e) => {
+    cancelled = true; CONV = null; closeListen();
+    toast(e.error === "not-allowed"
+      ? "マイクの使用が許可されていません。ブラウザの設定をご確認ください"
+      : (e.error === "no-speech" ? "音声を検出できませんでした" : "音声入力に失敗しました"), 3000);
+  };
+  rec.onend = async () => {
+    CONV = null;
+    if (cancelled) return;
+    const text = finalText.trim();
+    if (!text){ closeListen(); toast("聞き取れませんでした。もう一度お試しください", 2600); return; }
+
+    /* 翻訳中もオーバーレイを出したままにして、相手を待たせている理由が分かるようにする */
+    $("#listenMic").textContent = "⋯";
+    $("#listenMic").classList.add("thinking");
+    $("#listenMain").textContent = dst === "en" ? "Translating…" : "翻訳しています…";
+    $("#listenSub").textContent = "";
+    $("#listenStop").style.visibility = "hidden";
+
+    S.aiTo = dst;
+    const out = await doTranslate(text, { quiet: true });
+    closeListen();
+    if (!out) return;
+
+    const pair = dst === "en" ? { ja: text, en: out } : { ja: out, en: text };
+    openShow([pair], 0, { main: dst, speak: dst, conv: true });
+  };
+
+  try{ rec.start(); }
+  catch(e){ closeListen(); toast("音声入力を開始できませんでした", 2600); }
+}
+function stopConversation(abort){
+  if (!CONV) { closeListen(); return; }
+  try{ abort ? CONV.abort() : CONV.stop(); }catch(e){}
+  if (abort){ CONV = null; closeListen(); }
+}
+$("#listenStop").onclick   = () => stopConversation(false);   /* ここまでを翻訳する */
+$("#listenCancel").onclick = () => stopConversation(true);    /* やめる */
 
 /* --- 音声入力 --- */
 let REC = null;
@@ -1370,8 +1529,14 @@ $("#tabPhrases").onclick = () => go("phrases");
 $("#tabAi").onclick      = () => go("ai");
 $("#tabTools").onclick   = () => go("tools");
 $("#tabFav").onclick     = () => go("fav");
-$("#dirStaff").onclick   = () => { S.dir = "staff"; S.cat = null; localStorage.setItem(LS.dir, S.dir); render(); };
-$("#dirPt").onclick      = () => { S.dir = "pt";    S.cat = null; localStorage.setItem(LS.dir, S.dir); render(); };
+const setDir = (d) => {
+  S.dir = d; S.cat = null;
+  S.aiTo = d === "staff" ? "en" : "ja";   /* AI翻訳の向きもヘッダに合わせる */
+  localStorage.setItem(LS.dir, d);
+  render();
+};
+$("#dirStaff").onclick   = () => setDir("staff");
+$("#dirPt").onclick      = () => setDir("pt");
 $("#q").addEventListener("input", e => { S.q = e.target.value; renderPhrases(); });
 $("#qx").onclick = () => { $("#q").value = ""; S.q = ""; renderPhrases(); };
 
@@ -1380,20 +1545,21 @@ const showStep = (d) => {
   const n = S.show.i + d;
   if (n < 0 || n >= S.show.list.length) return;
   S.show.i = n; renderShow();
-  autoSpeak(filled(S.show.list[n])[outLang()], outLang());
+  const sl = S.show.speak || outLang();
+  autoSpeak(filled(S.show.list[n])[sl], sl);
 };
-$("#showPrev").onclick  = () => showStep(-1);
-$("#showNext").onclick  = () => showStep(1);
+$("#showPrev").onclick  = () => S.show.conv ? (closeShow(), startConversation("ja")) : showStep(-1);
+$("#showNext").onclick  = () => S.show.conv ? (closeShow(), startConversation("en")) : showStep(1);
 $("#showSpeak").onclick = () => {
-  const f = filled(S.show.list[S.show.i]);
-  speak(S.dir === "staff" ? f.en : f.ja, S.dir === "staff" ? "en" : "ja");
+  const sl = S.show.speak || outLang();
+  speak(filled(S.show.list[S.show.i])[sl], sl);
 };
 $("#showFav").onclick = () => { toggleFav(S.show.list[S.show.i]); renderShow(); render(); };
 $("#showAuto").onclick = () => {
   setAuto(!S.auto);
   renderShow();
   toast(S.auto ? "🔊 自動読み上げ ON" : "🔇 自動読み上げ OFF");
-  if (S.auto) autoSpeak(filled(S.show.list[S.show.i])[outLang()], outLang());
+  if (S.auto){ const sl = S.show.speak || outLang(); autoSpeak(filled(S.show.list[S.show.i])[sl], sl); }
 };
 document.addEventListener("keydown", e => { if (e.key === "Escape") closeShow(); });
 
@@ -1405,7 +1571,7 @@ document.addEventListener("keydown", e => { if (e.key === "Escape") closeShow();
   el.addEventListener("touchend", e => {
     if (x0 === null) return;
     const dx = e.changedTouches[0].clientX - x0; x0 = null;
-    if (Math.abs(dx) < 60) return;
+    if (Math.abs(dx) < 60 || S.show.conv) return;
     showStep(dx < 0 ? 1 : -1);
   }, {passive:true});
 })();
