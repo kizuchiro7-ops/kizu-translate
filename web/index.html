@@ -145,6 +145,15 @@ nav button[aria-pressed="true"]{color:var(--brand)}
 .mic{width:46px;height:46px;border-radius:50%;background:var(--bg);border:1px solid var(--line);display:grid;place-items:center;font-size:19px;flex:0 0 auto}
 .mic.rec{background:var(--danger);color:#fff;border-color:var(--danger);animation:pulse 1.2s infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.55}}
+.togglerow{display:flex;align-items:center;gap:10px;margin-top:10px;padding-top:10px;border-top:1px solid var(--line)}
+.togglerow .tl{flex:1;font-size:13px;font-weight:600;color:var(--ink-2);line-height:1.4}
+.switch{flex:0 0 auto;width:52px;height:31px;border-radius:999px;background:var(--line);position:relative;transition:.18s}
+.switch::after{content:"";position:absolute;top:3px;left:3px;width:25px;height:25px;border-radius:50%;
+  background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.28);transition:.18s}
+.switch[aria-pressed="true"]{background:var(--brand)}
+.switch[aria-pressed="true"]::after{transform:translateX(21px)}
+.autobtn{padding:10px;font-size:14px;font-weight:600;color:var(--ink-2);border-radius:999px}
+#show .top button.autobtn[aria-pressed="true"]{color:var(--brand)}
 .hint{font-size:11.5px;color:var(--ink-2);margin:10px 4px 0;line-height:1.6}
 
 .result{margin-top:12px;background:var(--card);border:1px solid var(--line);border-left:4px solid var(--brand);border-radius:var(--r);box-shadow:var(--shadow);padding:14px}
@@ -213,6 +222,7 @@ svg.bodychart .lbl{fill:var(--ink-2);font-size:9px;font-weight:600;pointer-event
 <div id="show" role="dialog" aria-modal="true">
   <div class="top">
     <button id="showClose">✕ 閉じる</button>
+    <button id="showAuto" class="autobtn">🔊 自動</button>
     <button id="showFav">☆ よく使う</button>
   </div>
   <div class="fills" id="showFills"></div>
@@ -641,10 +651,11 @@ const PAIN_WORDS = [
 const WORKER_URL  = "https://kizu-translate.kizuchiro7.workers.dev";
 const CLINIC_KEY  = "kizu-clinic";          /* Worker 側と一致させる簡易キー */
 const LS = {
-  fav:"kizutr.fav", dir:"kizutr.dir", hist:"kizutr.hist", fill:"kizutr.fill"
+  fav:"kizutr.fav", dir:"kizutr.dir", hist:"kizutr.hist", fill:"kizutr.fill", auto:"kizutr.auto"
 };
 const S = {
   dir: localStorage.getItem(LS.dir) || "staff",   /* staff | pt */
+  auto: localStorage.getItem(LS.auto) !== "0",    /* 翻訳後・表示時に自動で読み上げるか */
   tab: "phrases",
   cat: null,
   q: "",
@@ -733,11 +744,30 @@ function pickVoice(lang){
   for (const name of pref){ const hit = pool.find(v => (v.name||"").includes(name)); if (hit) return hit; }
   return pool.find(v => v.localService) || pool[0];
 }
+/* iOS Safari は「ユーザー操作の中で1度 speak() を呼ぶ」まで音声合成を動かさない。
+   非同期のfetchを挟むと操作の文脈が切れて自動読み上げが無音になるので、
+   最初のタップで無音のダミーを1度流して解錠しておく。 */
+let speechPrimed = false;
+function primeSpeech(){
+  if (speechPrimed || !("speechSynthesis" in window)) return;
+  speechPrimed = true;
+  try{
+    const u = new SpeechSynthesisUtterance(" ");
+    u.volume = 0;
+    speechSynthesis.speak(u);
+  }catch(e){ /* 解錠できなくても手動の🔊は動くので黙って進む */ }
+}
+document.addEventListener("pointerdown", primeSpeech, { once: true });
+document.addEventListener("touchstart", primeSpeech, { once: true, passive: true });
+
 function speak(text, lang){
   if (!("speechSynthesis" in window)) { toast("この端末は読み上げに対応していません"); return; }
+  const body = String(text).replace(/[◯_]{2,}|◯|＿+/g, "").trim();
+  if (!body) return;
   try{
     speechSynthesis.cancel();
-    const u = new SpeechSynthesisUtterance(String(text).replace(/[◯_]{2,}|◯|＿+/g, ""));
+    speechSynthesis.resume();          /* iOSでpause状態のまま止まることがある */
+    const u = new SpeechSynthesisUtterance(body);
     const v = pickVoice(lang);
     if (v) u.voice = v;
     u.lang = lang === "ja" ? "ja-JP" : "en-US";
@@ -745,6 +775,18 @@ function speak(text, lang){
     u.pitch = 1;
     speechSynthesis.speak(u);
   }catch(e){ toast("読み上げに失敗しました"); }
+}
+/* 相手に聞かせる言語（スタッフが使っているときは英語、患者が使っているときは日本語）*/
+const outLang = () => (S.dir === "staff" ? "en" : "ja");
+function autoSpeak(text, lang){
+  if (!S.auto) return;
+  /* 画面が描画されてから鳴らす。cancel直後のspeakを取りこぼす端末があるため少し遅らせる。 */
+  setTimeout(() => speak(text, lang), 140);
+}
+function setAuto(on){
+  S.auto = on;
+  localStorage.setItem(LS.auto, on ? "1" : "0");
+  if (!on) { try{ speechSynthesis.cancel(); }catch(e){} }
 }
 
 /* =====================================================================
@@ -754,6 +796,7 @@ function openShow(list, i){
   S.show = { list, i };
   renderShow();
   $("#show").classList.add("on");
+  autoSpeak(filled(list[i])[outLang()], outLang());
 }
 function closeShow(){ $("#show").classList.remove("on"); try{ speechSynthesis.cancel(); }catch(e){} }
 function renderShow(){
@@ -794,6 +837,8 @@ function renderShow(){
   }
 
   $("#showFav").textContent = S.fav.includes(keyOf(p)) ? "★ 登録済み" : "☆ よく使う";
+  $("#showAuto").setAttribute("aria-pressed", S.auto);
+  $("#showAuto").textContent = S.auto ? "🔊 自動" : "🔇 自動";
   $("#showPrev").disabled = S.show.i === 0;
   $("#showNext").disabled = S.show.i >= S.show.list.length - 1;
 }
@@ -901,6 +946,10 @@ function renderAi(){
         </div>
         <button class="btn pri" id="aiGo">翻訳</button>
       </div>
+      <div class="togglerow">
+        <span class="tl">🔊 翻訳したら自動で読み上げる</span>
+        <button class="switch" id="aiAuto" aria-pressed="${S.auto}" aria-label="自動読み上げ"></button>
+      </div>
     </div>
     ${r ? `<div class="result">
         <div class="lang">${r.to==="en"?"ENGLISH":"日本語"}</div>
@@ -911,7 +960,8 @@ function renderAi(){
           <button id="rCopy">コピー</button>
         </div>
       </div>` : ""}
-    <div class="hint">定型フレーズにない内容を、その場で翻訳します。医療的な判断は必ずご自身で確認してください。<br>
+    <div class="hint">🎙をタップして話すと、そのまま翻訳して読み上げます。施術中で手が離せないときはこちらを。<br>
+      定型フレーズにない内容向けです。医療的な判断は必ずご自身で確認してください。<br>
       通信が必要です（オフラインではフレーズ集のみ使えます）。</div>
     ${S.hist.length ? `<div class="hist"><div class="gtitle">最近の翻訳</div>
       ${S.hist.slice(0,8).map((h,i)=>`<div class="hitem" data-h="${i}">
@@ -921,6 +971,11 @@ function renderAi(){
   $("#aiSwap").onclick = () => { S.aiTo = S.aiTo === "en" ? "ja" : "en"; render(); };
   $("#aiGo").onclick   = () => doTranslate(inp.value);
   $("#aiMic").onclick  = () => micToggle(inp);
+  $("#aiAuto").onclick = () => {
+    setAuto(!S.auto);
+    $("#aiAuto").setAttribute("aria-pressed", S.auto);
+    toast(S.auto ? "🔊 自動読み上げ ON" : "🔇 自動読み上げ OFF");
+  };
   inp.addEventListener("keydown", e => {
     if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) { e.preventDefault(); doTranslate(inp.value); }
   });
@@ -956,6 +1011,7 @@ async function doTranslate(text){
     localStorage.setItem(LS.hist, JSON.stringify(S.hist));
     render();
     $("#aiIn").value = text;
+    autoSpeak(S.aiResult.text, S.aiTo);
   }catch(err){
     toast(navigator.onLine ? "翻訳に失敗しました。もう一度お試しください" : "オフラインです。フレーズ集をお使いください", 2600);
   }finally{
@@ -1161,13 +1217,25 @@ $("#q").addEventListener("input", e => { S.q = e.target.value; renderPhrases(); 
 $("#qx").onclick = () => { $("#q").value = ""; S.q = ""; renderPhrases(); };
 
 $("#showClose").onclick = closeShow;
-$("#showPrev").onclick  = () => { if (S.show.i > 0){ S.show.i--; renderShow(); } };
-$("#showNext").onclick  = () => { if (S.show.i < S.show.list.length-1){ S.show.i++; renderShow(); } };
+const showStep = (d) => {
+  const n = S.show.i + d;
+  if (n < 0 || n >= S.show.list.length) return;
+  S.show.i = n; renderShow();
+  autoSpeak(filled(S.show.list[n])[outLang()], outLang());
+};
+$("#showPrev").onclick  = () => showStep(-1);
+$("#showNext").onclick  = () => showStep(1);
 $("#showSpeak").onclick = () => {
   const f = filled(S.show.list[S.show.i]);
   speak(S.dir === "staff" ? f.en : f.ja, S.dir === "staff" ? "en" : "ja");
 };
 $("#showFav").onclick = () => { toggleFav(S.show.list[S.show.i]); renderShow(); render(); };
+$("#showAuto").onclick = () => {
+  setAuto(!S.auto);
+  renderShow();
+  toast(S.auto ? "🔊 自動読み上げ ON" : "🔇 自動読み上げ OFF");
+  if (S.auto) autoSpeak(filled(S.show.list[S.show.i])[outLang()], outLang());
+};
 document.addEventListener("keydown", e => { if (e.key === "Escape") closeShow(); });
 
 /* 大きく表示中のスワイプで前後移動 */
@@ -1179,8 +1247,7 @@ document.addEventListener("keydown", e => { if (e.key === "Escape") closeShow();
     if (x0 === null) return;
     const dx = e.changedTouches[0].clientX - x0; x0 = null;
     if (Math.abs(dx) < 60) return;
-    if (dx < 0 && S.show.i < S.show.list.length-1){ S.show.i++; renderShow(); }
-    if (dx > 0 && S.show.i > 0){ S.show.i--; renderShow(); }
+    showStep(dx < 0 ? 1 : -1);
   }, {passive:true});
 })();
 
