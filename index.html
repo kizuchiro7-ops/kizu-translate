@@ -111,6 +111,14 @@ nav button[aria-pressed="true"]{color:var(--brand)}
 #show.on{display:flex}
 #show .top{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}
 #show .top button{padding:10px;font-size:14px;font-weight:600;color:var(--ink-2)}
+.fills{display:none;gap:7px;flex-wrap:wrap;align-items:center;padding:10px 12px;margin:4px 0 2px;
+  background:var(--brand-soft);border-radius:12px}
+.fills.on{display:flex}
+.fills .fl{font-size:11px;font-weight:700;color:var(--brand);letter-spacing:.04em}
+.fills label{display:flex;align-items:center;gap:4px;font-size:13px;font-weight:600;color:var(--ink-2)}
+.fills input{width:60px;padding:8px 8px;border-radius:9px;border:1px solid var(--line);
+  background:var(--card);font-size:16px;font-weight:600;text-align:right;outline:none}
+.fills input:focus{border-color:var(--brand)}
 #show .body{flex:1;display:flex;flex-direction:column;justify-content:center;gap:14px;overflow-y:auto;padding:8px 0}
 .bigblock{background:var(--card);border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow);padding:20px 18px}
 .bigblock .lang{font-size:10px;font-weight:800;letter-spacing:.14em;color:var(--ink-2);margin-bottom:8px;display:flex;align-items:center;gap:8px}
@@ -207,6 +215,7 @@ svg.bodychart .lbl{fill:var(--ink-2);font-size:9px;font-weight:600;pointer-event
     <button id="showClose">✕ 閉じる</button>
     <button id="showFav">☆ よく使う</button>
   </div>
+  <div class="fills" id="showFills"></div>
   <div class="body" id="showBody"></div>
   <div class="foot">
     <button id="showPrev">← 前</button>
@@ -451,7 +460,7 @@ const STAFF_CATS = [
   { t:"次回のご予約", items:[
     {ja:"次回のご予約をお取りしますか？", en:"Would you like to book your next appointment?"},
     {ja:"ご希望の曜日と時間はありますか？", en:"Do you have a preferred day and time?"},
-    {ja:"◯月◯日の◯時はいかがですか？", en:"How about ___ at ___?"},
+    {ja:"◯月◯日の◯時はいかがですか？", en:"How about ___/___ at ___:00?"},
     {ja:"あいにくその時間は埋まっております。", en:"I'm afraid that time is already taken."},
     {ja:"その前後のお時間でしたらご案内できます。", en:"I can offer you a slot just before or just after that."},
     {ja:"ご予約の確認メールをお送りします。", en:"We'll send you a confirmation email."},
@@ -632,7 +641,7 @@ const PAIN_WORDS = [
 const WORKER_URL  = "https://kizu-translate.kizuchiro7.workers.dev";
 const CLINIC_KEY  = "kizu-clinic";          /* Worker 側と一致させる簡易キー */
 const LS = {
-  fav:"kizutr.fav", dir:"kizutr.dir", hist:"kizutr.hist"
+  fav:"kizutr.fav", dir:"kizutr.dir", hist:"kizutr.hist", fill:"kizutr.fill"
 };
 const S = {
   dir: localStorage.getItem(LS.dir) || "staff",   /* staff | pt */
@@ -640,6 +649,7 @@ const S = {
   cat: null,
   q: "",
   fav: JSON.parse(localStorage.getItem(LS.fav) || "[]"),
+  fill: JSON.parse(localStorage.getItem(LS.fill) || "{}"),
   hist: JSON.parse(localStorage.getItem(LS.hist) || "[]"),
   show: { list:[], i:0 },
   pain: null,
@@ -653,6 +663,50 @@ const $  = (s) => document.querySelector(s);
 const esc = (s) => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const keyOf = (p) => (p.ja + "|" + p.en);
 const save = () => { localStorage.setItem(LS.fav, JSON.stringify(S.fav)); };
+
+/* ---------------------------------------------------------------------
+   数値の差し込み（料金・分数・回数など）
+   料金は施術者ごと・初回/2回目で違うので、アプリ側に固定値は持たない。
+   スタッフが自分の端末で一度入力すれば、その値がそのフレーズに残る。
+   日本語の ◯ と英語の ___ を同じ順番で対応させる。
+   --------------------------------------------------------------------- */
+const JA_SLOT = /◯+/g, EN_SLOT = /_{2,}/g;
+const slotCount = (p) =>
+  Math.min((p.ja.match(JA_SLOT) || []).length, (p.en.match(EN_SLOT) || []).length);
+
+function substitute(text, re, vals){
+  let i = 0;
+  return text.replace(re, (m) => {
+    const v = vals[i++];
+    return (v === undefined || v === "") ? m : v;
+  });
+}
+/* 表示用に値を差し込んだコピーを返す。keyOf は必ず元のフレーズに対して使うこと。 */
+function filled(p){
+  const n = slotCount(p);
+  if (!n) return p;
+  const vals = S.fill[keyOf(p)] || [];
+  if (!vals.some(v => v !== undefined && v !== "")) return p;
+  return { ja: substitute(p.ja, JA_SLOT, vals), en: substitute(p.en, EN_SLOT, vals), note: p.note };
+}
+/* 入力欄の見出し。「◯◯円」なら「円」のように、直後の助数詞を拾う。 */
+function slotUnits(p){
+  const units = [];
+  let m;
+  const re = new RegExp(JA_SLOT.source, "g");
+  while ((m = re.exec(p.ja)) !== null){
+    const next = p.ja.charAt(m.index + m[0].length);
+    units.push(/[円月日時分回秒名個週年]/.test(next) ? next : "");
+  }
+  return units;
+}
+function setFill(p, i, value){
+  const k = keyOf(p);
+  const vals = (S.fill[k] || []).slice();
+  vals[i] = value;
+  if (vals.some(v => v !== undefined && v !== "")) S.fill[k] = vals; else delete S.fill[k];
+  localStorage.setItem(LS.fill, JSON.stringify(S.fill));
+}
 
 function toast(msg, ms){
   const t = $("#toast"); t.innerHTML = msg; t.classList.add("on");
@@ -705,23 +759,43 @@ function closeShow(){ $("#show").classList.remove("on"); try{ speechSynthesis.ca
 function renderShow(){
   const p = S.show.list[S.show.i];
   if (!p) return closeShow();
+  const f = filled(p);
   /* 主言語 = 相手に見せる言語 */
   const mainLang = S.dir === "staff" ? "en" : "ja";
   const subLang  = mainLang === "en" ? "ja" : "en";
-  const L = { en:["ENGLISH","en"], ja:["日本語","ja"] };
+  const L = { en:"ENGLISH", ja:"日本語" };
   const block = (lang, cls) => `
     <div class="bigblock ${cls}">
-      <div class="lang"><span>${L[lang][0]}</span>
+      <div class="lang"><span>${L[lang]}</span>
         <button class="spk" data-spk="${lang}">🔊 ${lang==="ja"?"読み上げ":"Speak"}</button></div>
-      <div class="txt">${esc(p[lang])}</div>
+      <div class="txt" data-txt="${lang}">${esc(f[lang])}</div>
     </div>`;
-  $("#showBody").innerHTML =
-    block(mainLang, "mainblk") + block(subLang, "");
+  $("#showBody").innerHTML = block(mainLang, "mainblk") + block(subLang, "");
+  $("#showBody").querySelectorAll("[data-spk]").forEach(b =>
+    b.onclick = () => speak(filled(p)[b.dataset.spk], b.dataset.spk));
+
+  /* 数値の入力欄 */
+  const n = slotCount(p);
+  const fillsEl = $("#showFills");
+  fillsEl.classList.toggle("on", n > 0);
+  if (n > 0){
+    const units = slotUnits(p), vals = S.fill[keyOf(p)] || [];
+    fillsEl.innerHTML = `<span class="fl">入力</span>` + Array.from({length:n}, (_, i) =>
+      `<label><input type="text" inputmode="numeric" enterkeyhint="done" data-slot="${i}"
+         value="${esc(vals[i] || "")}" placeholder="—">${esc(units[i] || "")}</label>`).join("");
+    fillsEl.querySelectorAll("[data-slot]").forEach(inp => {
+      inp.addEventListener("input", () => {
+        setFill(p, +inp.dataset.slot, inp.value.trim());
+        const g = filled(p);
+        /* 入力中にフォーカスを飛ばしたくないので、本文だけ差し替える */
+        $("#showBody").querySelectorAll("[data-txt]").forEach(t => { t.textContent = g[t.dataset.txt]; });
+      });
+    });
+  }
+
   $("#showFav").textContent = S.fav.includes(keyOf(p)) ? "★ 登録済み" : "☆ よく使う";
   $("#showPrev").disabled = S.show.i === 0;
   $("#showNext").disabled = S.show.i >= S.show.list.length - 1;
-  $("#showBody").querySelectorAll("[data-spk]").forEach(b =>
-    b.onclick = () => speak(p[b.dataset.spk], b.dataset.spk));
 }
 
 /* =====================================================================
@@ -729,7 +803,8 @@ function renderShow(){
    ===================================================================== */
 function priSec(p){
   /* pri = 使う人が読む言語 / sec = 相手に見せる言語 */
-  return S.dir === "staff" ? [p.ja, p.en] : [p.en, p.ja];
+  const f = filled(p);
+  return S.dir === "staff" ? [f.ja, f.en] : [f.en, f.ja];
 }
 function cardHTML(p, idx, warn){
   const [pri, sec] = priSec(p);
@@ -1089,8 +1164,8 @@ $("#showClose").onclick = closeShow;
 $("#showPrev").onclick  = () => { if (S.show.i > 0){ S.show.i--; renderShow(); } };
 $("#showNext").onclick  = () => { if (S.show.i < S.show.list.length-1){ S.show.i++; renderShow(); } };
 $("#showSpeak").onclick = () => {
-  const p = S.show.list[S.show.i];
-  speak(S.dir === "staff" ? p.en : p.ja, S.dir === "staff" ? "en" : "ja");
+  const f = filled(S.show.list[S.show.i]);
+  speak(S.dir === "staff" ? f.en : f.ja, S.dir === "staff" ? "en" : "ja");
 };
 $("#showFav").onclick = () => { toggleFav(S.show.list[S.show.i]); renderShow(); render(); };
 document.addEventListener("keydown", e => { if (e.key === "Escape") closeShow(); });
