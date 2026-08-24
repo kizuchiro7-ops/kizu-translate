@@ -5,6 +5,9 @@ KIZUカイロプラクティックに来院する英語圏の患者さんと、�
 
 受付 → 問診 → 施術中 → 施術後の説明 → 会計・予約 の全フローをカバーします。
 
+- **アプリ**: https://kizuchiro7-ops.github.io/kizu-translate/
+- **翻訳API**: https://kizu-translate.kizuchiro7.workers.dev （`/health` で疎通確認）
+
 ```
 kizu-translate/
 ├── web/                     ← スマホに入れるアプリ本体（静的ファイルのみ）
@@ -83,12 +86,27 @@ npx wrangler secret put CLINIC_KEY
 curl -s https://kizu-translate.kizuchiro7.workers.dev/health
 ```
 
-### 3. Web側を公開（GitHub Pages）
+### 3. Web側の更新（GitHub Pages）
 
-`web/` の中身をそのまま配信するだけです。公開後、`worker/wrangler.toml` の
-`ALLOWED_ORIGIN` と `web/index.html` の `WORKER_URL` が実際のURLと一致しているか確認してください。
+`main` に `web/` を編集してコミットしたあと、`gh-pages` ブランチへ反映します。
+Pages は `gh-pages` ブランチのルートを配信しています。
+
+```bash
+git subtree push --prefix web origin gh-pages
+```
+
+反映には30〜60秒かかります。確認:
+
+```bash
+curl -s https://kizuchiro7-ops.github.io/kizu-translate/ | grep -c ようこそ
+```
+
+スマホ側は Service Worker がHTMLを network-first で取りに行くので、
+アプリを開き直せば新しいフレーズが反映されます。
 
 ### 4. スマホに入れる
+
+https://kizuchiro7-ops.github.io/kizu-translate/ を開いて:
 
 - **iPhone**: Safari で開く →「共有」→「ホーム画面に追加」
 - **Android**: Chrome で開く → メニュー →「アプリをインストール」
