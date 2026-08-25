@@ -177,6 +177,18 @@ cd worker && npx wrangler deploy
 openssl rand -hex 32 | npx wrangler secret put SESSION_SECRET
 ```
 
+### Resend のキーを入れ替えるとき
+
+`wrangler secret put` に手で貼り付けると失敗しやすい（コマンド末尾に連結される、
+表の行ごと選択して「名前」と「キー」の2行が入る、プロンプトが出る前に貼ってしまう）。
+クリップボードから `re_` で始まる行だけを取り出して渡すスクリプトを用意してある。
+
+```bash
+cd ~/kizu-translate/worker && bash staff/set_resend_key.sh
+```
+
+Resend でキーを作ってコピーしたあと、これを実行するだけ。キーは画面に出ない。
+
 旧方式の `CLINIC_KEY` は未使用です。削除して構いません。
 
 ```bash
