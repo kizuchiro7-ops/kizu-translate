@@ -5,20 +5,48 @@ compatibility_date = "2026-08-24"
 [observability]
 enabled = true
 
-[vars]
-# CORS許可オリジン(カンマ区切り)。ブラウザ側の制御でしかないので、
-# 実際の足止めは X-Clinic-Key ヘッダ。
-ALLOWED_ORIGIN = "https://kizuchiro7-ops.github.io"
+# 院内スタッフの名簿、発行中のログインコード、レート制限、最終ログイン記録。
+# キー構成は src/store.js を参照。学生向け kizu-ai の AUTH とは別の名前空間。
+[[kv_namespaces]]
+binding = "AUTH"
+id = "597bd843b7f34d8fb10a294cf3de3dc9"
 
-# 使用モデル。速度優先に切り替えたい場合は claude-haiku-4-5 に変更して再デプロイ。
-MODEL = "claude-opus-5"
-
-# IPあたりのバースト制限。period は 10 か 60 のみ。
+# 翻訳のバースト制限。period は 10 か 60 のみ。
 [[ratelimits]]
 name = "RATE_LIMIT"
 namespace_id = "2001"
 simple = { limit = 30, period = 60 }
 
+# /auth/* のIP単位バースト制限。総当たりとメール枠の浪費を止める。
+[[ratelimits]]
+name = "AUTH_RATE_LIMIT"
+namespace_id = "2002"
+simple = { limit = 20, period = 60 }
+
+[vars]
+# CORS許可オリジン(カンマ区切り)。ブラウザ側の制御でしかないので、
+# 実際の防御は Authorization: Bearer のトークン検証。
+ALLOWED_ORIGIN = "https://kizuchiro7-ops.github.io"
+
+# 使用モデル。速度優先に切り替えたい場合は claude-haiku-4-5 に変更して再デプロイ。
+MODEL = "claude-opus-5"
+
+# ログインコードの送信元。KIZU AI と同じ bwm-kid.com を使う。
+# SPF/DKIM/DMARC 設定済みで実績があるため。kizuchiro.com は本番メールが
+# 動いているので触らない。
+EMAIL_FROM = "KIZU 翻訳 <noreply@bwm-kid.com>"
+EMAIL_REPLY_TO = "kizuchiro7@gmail.com"
+
+# SESSION_VERSION を上げて再デプロイすると、発行済みトークンが一斉に無効になる。
+# 端末を紛失したときの「全員ログアウト」レバー。
+SESSION_VERSION = "1"
+SESSION_TTL_DAYS = "30"
+
 # Secrets (`wrangler secret put` で設定。ここには書かない):
-#   ANTHROPIC_API_KEY
-#   CLINIC_KEY   … web/index.html の CLINIC_KEY と同じ値
+#   ANTHROPIC_API_KEY  … 翻訳
+#   SESSION_SECRET     … トークンのHMAC鍵 (openssl rand -hex 32)
+#   OTP_PEPPER         … ログインコードのハッシュ用ソルト (openssl rand -hex 32)
+#   RESEND_API_KEY     … メール送信
+#
+# CLINIC_KEY は認証をメール方式にしたため未使用。削除してよい:
+#   npx wrangler secret delete CLINIC_KEY

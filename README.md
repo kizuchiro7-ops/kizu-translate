@@ -5,7 +5,7 @@ KIZUカイロプラクティックに来院する英語圏の患者さんと、�
 
 受付 → 問診 → 施術中 → 施術後の説明 → 会計・予約 の全フローをカバーします。
 
-- **アプリ**: https://kizuchiro7-ops.github.io/kizu-translate/
+- **アプリ**: https://kizuchiro7-ops.github.io/kizu-translate/ （**院内スタッフのみ・メール認証**）
 - **翻訳API**: https://kizu-translate.kizuchiro7.workers.dev （`/health` で疎通確認）
 
 ```
@@ -90,6 +90,54 @@ python3 -c "import re;[print(hex(ord(c)),c) for c in set(open('web/index.html').
 ```
 
 
+## 認証（院内スタッフのみ）
+
+名簿に登録されたメールアドレスの人だけが使えます。患者さんはログインしません
+（スタッフが自分の端末を渡して使ってもらう運用）。
+
+**流れ**: メールアドレス入力 → 6桁のコードがメールで届く → 入力 → 30日間有効の
+トークンを受け取る。トークンはHMAC署名済みでサーバーに保存しない（ステートレス）ため、
+翻訳のたびにKVを読まずに済み、無料枠の書き込み上限を消費しません。
+
+一度ログインすれば**圏外でもフレーズ集・人体図・読み上げは使えます**
+（有効期限の判定を端末側でも持っているため）。通信が要るのは翻訳だけです。
+
+### スタッフを追加・削除する
+
+名簿は個人情報なのでリポジトリの外に置いています。
+
+```bash
+open -e ~/kizu-translate-staff.txt
+```
+
+1行に1アドレス、カンマ以降は自由なメモです。編集したら反映します。
+
+```bash
+cd ~/kizu-translate/worker && python3 staff/sync_staff.py --apply
+```
+
+`--apply` なしで実行すると、何が追加・削除されるかの確認だけできます。
+誰がいつログインしたかは `--report` で見られます。
+
+### 端末を紛失したとき
+
+名簿から外すと**新規ログインはできなくなります**が、すでにログイン済みの端末は
+最大30日間そのまま使えます。即座に全端末を締め出すには、`worker/wrangler.toml` の
+`SESSION_VERSION` を +1 して再デプロイしてください（発行済みトークンが一斉に無効になります）。
+
+```bash
+cd ~/kizu-translate/worker && npx wrangler deploy
+```
+
+### 制限
+
+- コードは10分で失効、1回限り。入力ミスは5回まで（超えるとコードごと破棄）。
+- 同じアドレスへの再送は60秒間隔、1日5通まで。
+- `/auth/*` はIPあたり60秒20回まで。
+- 名簿にないアドレスにも**成功と同じ応答**を返します。どのアドレスが登録済みかを
+  外から総当たりで調べられないようにするためです（メールは届きません）。
+- Resend無料枠は1日100通。スタッフ数名・30日トークンなら十分です。
+
 ## セットアップ
 
 ### 1. 金額・時間の入力について（事前設定は不要）
@@ -114,18 +162,26 @@ grep -n "◯\|___" web/index.html
 cd worker && npx wrangler deploy
 ```
 
-続けてシークレットを設定します。
+必要なシークレットは4つです。
+
+| 名前 | 用途 |
+|---|---|
+| `ANTHROPIC_API_KEY` | 翻訳 |
+| `SESSION_SECRET` | トークンのHMAC鍵（`openssl rand -hex 32`） |
+| `OTP_PEPPER` | ログインコードのハッシュ用ソルト（`openssl rand -hex 32`） |
+| `RESEND_API_KEY` | ログインコードのメール送信 |
+
+ランダム値の2つはこう入れます（値を画面に出さずに済みます）。
 
 ```bash
-npx wrangler secret put ANTHROPIC_API_KEY
+openssl rand -hex 32 | npx wrangler secret put SESSION_SECRET
 ```
+
+旧方式の `CLINIC_KEY` は未使用です。削除して構いません。
 
 ```bash
-npx wrangler secret put CLINIC_KEY
+npx wrangler secret delete CLINIC_KEY
 ```
-
-`CLINIC_KEY` は `web/index.html` の `const CLINIC_KEY = "..."` と同じ値にしてください。
-本物の認証ではなく、Worker のURLを見つけたボットに API クレジットを使わせないための足止めです。
 
 動作確認:
 
