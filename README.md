@@ -189,11 +189,7 @@ cd ~/kizu-translate/worker && bash staff/set_resend_key.sh
 
 Resend でキーを作ってコピーしたあと、これを実行するだけ。キーは画面に出ない。
 
-旧方式の `CLINIC_KEY` は未使用です。削除して構いません。
-
-```bash
-npx wrangler secret delete CLINIC_KEY
-```
+（旧方式の `CLINIC_KEY` は廃止済み・削除済みです。）
 
 動作確認:
 
