@@ -38,7 +38,8 @@ button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
 input,textarea{font:inherit;color:inherit}
 
 /* ---------- App shell ---------- */
-#app{display:flex;flex-direction:column;height:100dvh}
+#app{display:none;flex-direction:column;height:100dvh}
+#app.ready{display:flex}
 header{
   padding:calc(var(--safe-t) + 10px) 14px 10px; background:var(--card);
   border-bottom:1px solid var(--line); flex:0 0 auto; position:relative; z-index:5;
@@ -190,6 +191,30 @@ svg.bodychart .lbl{fill:var(--ink-2);font-size:9px;font-weight:600;pointer-event
 .selout{margin-top:10px;font-size:13px;line-height:1.7;background:var(--bg);border-radius:10px;padding:10px 12px;min-height:44px}
 .selout b{color:var(--brand)}
 
+/* ---------- ログイン画面 ---------- */
+#gate{position:fixed;inset:0;z-index:80;background:var(--bg);display:none;
+  align-items:center;justify-content:center;padding:calc(var(--safe-t) + 24px) 20px calc(var(--safe-b) + 24px);overflow-y:auto}
+#gate.on{display:flex}
+#gate .gwrap{width:100%;max-width:22em;background:var(--card);border:1px solid var(--line);
+  border-radius:20px;box-shadow:var(--shadow);padding:26px 22px}
+#gate .glogo{font-size:22px;font-weight:800;letter-spacing:.01em}
+#gate .gsub{font-size:11.5px;font-weight:600;color:var(--ink-2);letter-spacing:.06em;margin-top:3px}
+#gate .gmsg{font-size:13.5px;color:var(--ink-2);line-height:1.7;margin:20px 0 14px}
+#gate input{width:100%;padding:14px 13px;border-radius:12px;border:1px solid var(--line);
+  background:var(--bg);font-size:17px;outline:none;margin-bottom:11px}
+#gate input:focus{border-color:var(--brand)}
+#gate #gCode{text-align:center;font-size:26px;font-weight:700;letter-spacing:.3em;font-variant-numeric:tabular-nums}
+#gate .gbtn{width:100%;padding:15px;border-radius:12px;background:var(--brand);color:var(--brand-ink);
+  font-weight:800;font-size:15px}
+#gate .gbtn:disabled{opacity:.5}
+#gate .glink{display:block;width:100%;text-align:center;padding:11px 4px;font-size:12.5px;
+  font-weight:600;color:var(--ink-2);margin-top:2px}
+#gate .gnote{font-size:12.5px;line-height:1.7;margin-top:14px;min-height:1.2em}
+#gate .gnote.err{color:var(--danger);font-weight:600}
+#gate .gnote.ok{color:var(--brand);font-weight:600}
+#gate .gfoot{font-size:11px;color:var(--ink-2);line-height:1.7;margin-top:18px;
+  border-top:1px solid var(--line);padding-top:14px}
+
 /* ---------- 会話モード ---------- */
 .convrow{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:12px}
 .conv{padding:15px 11px;border-radius:15px;background:var(--card);border:1px solid var(--line);
@@ -267,6 +292,34 @@ svg.bodychart .lbl{fill:var(--ink-2);font-size:9px;font-weight:600;pointer-event
     <button id="showPrev">← 前</button>
     <button class="pri" id="showSpeak">🔊 読み上げ</button>
     <button id="showNext">次 →</button>
+  </div>
+</div>
+
+<div id="gate">
+  <div class="gwrap">
+    <div class="glogo">KIZU 翻訳</div>
+    <div class="gsub">院内スタッフ用 · STAFF ONLY</div>
+
+    <div id="gateEmail">
+      <p class="gmsg">登録されているメールアドレスを入力してください。ログイン用のコードをお送りします。</p>
+      <input id="gEmail" type="email" inputmode="email" autocomplete="username"
+             autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="you@example.com">
+      <button class="gbtn" id="gSend">コードを送る</button>
+    </div>
+
+    <div id="gateCode" hidden>
+      <p class="gmsg"><b id="gTo"></b> にコードを送りました。<br>
+        届いた6桁の数字を入力してください（有効期限10分）。</p>
+      <input id="gCode" type="text" inputmode="numeric" autocomplete="one-time-code"
+             maxlength="6" placeholder="000000">
+      <button class="gbtn" id="gVerify">ログイン</button>
+      <button class="glink" id="gResend">コードを再送する</button>
+      <button class="glink" id="gBack">← メールアドレスを変更する</button>
+    </div>
+
+    <div class="gnote" id="gNote"></div>
+    <div class="gfoot">一度ログインすると30日間有効です。<br>
+      メールが届かない場合は迷惑メールフォルダをご確認ください。</div>
   </div>
 </div>
 
@@ -695,16 +748,16 @@ const PAIN_WORDS = [
 /* =====================================================================
    STATE
    ===================================================================== */
-const WORKER_URL  = "https://kizu-translate.kizuchiro7.workers.dev";
-const CLINIC_KEY  = "kizu-clinic";          /* Worker 側と一致させる簡易キー */
+const WORKER_URL = "https://kizu-translate.kizuchiro7.workers.dev";
 const LS = {
-  fav:"kizutr.fav", dir:"kizutr.dir", hist:"kizutr.hist", fill:"kizutr.fill", auto:"kizutr.auto", voice:"kizutr.voice", rate:"kizutr.rate"
+  fav:"kizutr.fav", dir:"kizutr.dir", hist:"kizutr.hist", fill:"kizutr.fill", auto:"kizutr.auto", voice:"kizutr.voice", rate:"kizutr.rate", session:"kizutr.session"
 };
 const S = {
   dir: localStorage.getItem(LS.dir) || "staff",   /* staff | pt */
   auto: localStorage.getItem(LS.auto) !== "0",    /* 翻訳後・表示時に自動で読み上げるか */
   voice: JSON.parse(localStorage.getItem(LS.voice) || "{}"),  /* {en:voiceURI, ja:voiceURI} */
   rate: parseFloat(localStorage.getItem(LS.rate) || "0.95"),
+  session: JSON.parse(localStorage.getItem(LS.session) || "null"),
   tab: "phrases",
   cat: null,
   q: "",
@@ -1084,7 +1137,19 @@ function voiceOptions(lang){
       esc(v.name)}${i === 0 ? "（おすすめ）" : ""}</option>`).join("");
 }
 function settingsHTML(){
+  const exp = S.session ? new Date(S.session.expiresAt) : null;
   return `<div class="tool" style="margin-top:20px">
+    <h3>アカウント</h3>
+    <div class="sub">この端末でログインしているスタッフ</div>
+    <div class="selout" style="margin-top:0"><b>${esc(S.session ? S.session.email : "-")}</b><br>
+      <span style="color:var(--ink-2)">有効期限 ${exp ? exp.getFullYear() + "年" + (exp.getMonth()+1) + "月" + exp.getDate() + "日" : "-"}</span></div>
+    <div style="display:flex;gap:8px;margin-top:10px">
+      <button class="btn" id="btnReset" style="flex:1">🧹 新しい患者さん</button>
+      <button class="btn" id="btnLogout" style="flex:0 0 auto">ログアウト</button>
+    </div>
+  </div>
+
+  <div class="tool" style="margin-top:20px">
     <h3>音声の設定</h3>
     <div class="sub">この端末だけの設定です。候補は端末に入っている声から出ます。</div>
     <div class="setrow"><span class="sk">English</span>
@@ -1108,6 +1173,13 @@ function settingsHTML(){
   </div>`;
 }
 function bindSettings(){
+  const lo = $("#btnLogout");
+  if (lo) lo.onclick = () => {
+    if (confirm("ログアウトしますか？\n再度使うにはメールでコードを受け取る必要があります。")) signOut();
+  };
+  const rp = $("#btnReset");
+  if (rp) rp.onclick = resetPatient;
+
   const sel = (id, lang) => {
     const el = $(id);
     if (!el) return;
@@ -1189,7 +1261,11 @@ function renderAi(){
       医療的な判断は必ずご自身で確認してください。
       通信が必要です（オフラインではフレーズ集のみ使えます）。
     </div>
-    ${S.hist.length ? `<div class="hist"><div class="gtitle">最近の翻訳</div>
+    ${S.hist.length ? `<div class="hist">
+      <div class="gtitle" style="display:flex;align-items:center;justify-content:space-between">
+        <span>最近の翻訳</span>
+        <button id="histClear" style="font-size:11px;font-weight:700;color:var(--ink-2);padding:4px 6px">🧹 消す</button>
+      </div>
       ${S.hist.slice(0,8).map((h,i)=>`<div class="hitem" data-h="${i}">
         <div class="a">${esc(h.src)}</div><div class="b">${esc(h.text)}</div></div>`).join("")}</div>` : ""}
   `;
@@ -1212,6 +1288,8 @@ function renderAi(){
     $("#rCopy").onclick  = () => { navigator.clipboard.writeText(r.text).then(()=>toast("コピーしました")); };
     $("#rBig").onclick   = () => openShow([{ja: r.to==="ja"?r.text:r.src, en: r.to==="en"?r.text:r.src}], 0);
   }
+  const hc = $("#histClear");
+  if (hc) hc.onclick = resetPatient;
   $("#main").querySelectorAll("[data-h]").forEach(el => el.onclick = () => {
     const h = S.hist[+el.dataset.h];
     S.aiResult = h; S.aiTo = h.to; render(); $("#aiIn").value = h.src;
@@ -1228,9 +1306,11 @@ async function doTranslate(text, opts){
   try{
     const res = await fetch(WORKER_URL, {
       method:"POST",
-      headers:{ "Content-Type":"application/json", "X-Clinic-Key": CLINIC_KEY },
+      headers:{ "Content-Type":"application/json",
+                "Authorization": "Bearer " + (S.session ? S.session.token : "") },
       body: JSON.stringify({ text, to: S.aiTo, context:"chiropractic_clinic" })
     });
+    if (res.status === 401){ signOut("ログインの有効期限が切れました。もう一度ログインしてください。"); return null; }
     if (!res.ok) throw new Error("HTTP " + res.status);
     const data = await res.json();
     if (!data.translation) throw new Error("empty");
@@ -1391,6 +1471,17 @@ const CHOICE_TOOLS = [
           ["少し悪くなった","A little worse"],["とても悪くなった","Much worse"]] }
 ];
 
+/* 端末を次の患者さんに渡す前に、前の方の情報を画面から消す。
+   医療の場で共有端末を使う以上、前の患者さんの訴えが残っているのは避けたい。 */
+function resetPatient(){
+  S.hist = []; localStorage.removeItem(LS.hist);
+  S.zones.clear();
+  S.pain = null;
+  S.aiResult = null;
+  render();
+  toast("リセットしました。次の患者さんをお迎えできます");
+}
+
 function renderTools(){
   const main = $("#main");
   const figure = (view, dx) => {
@@ -1412,6 +1503,9 @@ function renderTools(){
       <text class="lbl" x="75" y="258" text-anchor="middle">${view==="front"?"前面 Front":"背面 Back"}</text></g>`;
   };
   main.innerHTML = `
+    <button class="btn" id="resetPt" style="width:100%;padding:14px;margin-bottom:12px;background:var(--card);box-shadow:var(--shadow)">
+      🧹 新しい患者さん — 履歴と選択をリセット
+    </button>
     <div class="tool">
       <h3>人体図で部位を指す</h3>
       <div class="sub">患者さんに画面を渡して、つらいところをタップしてもらいます。もう一度タップで解除。</div>
@@ -1453,6 +1547,8 @@ function renderTools(){
       </div>
     </div>`).join("")}
   `;
+
+  $("#resetPt").onclick = resetPatient;
 
   /* --- 人体図 --- */
   const paintZones = () => {
@@ -1581,7 +1677,124 @@ document.addEventListener("keydown", e => { if (e.key === "Escape") closeShow();
   }, {passive:true});
 })();
 
-render();
+/* =====================================================================
+   ログイン（メール + ワンタイムコード）
+   トークンはHMAC署名済みでサーバーに保存されない。有効期限を端末側でも
+   持っているので、圏外でもフレーズ集は開ける（翻訳だけが通信を要する）。
+   ===================================================================== */
+const sessionValid = () =>
+  !!(S.session && S.session.token && S.session.expiresAt > Date.now());
+
+function gateNote(msg, kind){
+  const n = $("#gNote");
+  n.className = "gnote" + (kind ? " " + kind : "");
+  n.innerHTML = msg || "";
+}
+function showGate(msg){
+  $("#app").classList.remove("ready");
+  $("#gate").classList.add("on");
+  $("#gateCode").hidden = true;
+  $("#gateEmail").hidden = false;
+  gateNote(msg || "", msg ? "err" : "");
+  if (S.session && S.session.email) $("#gEmail").value = S.session.email;
+}
+function enterApp(){
+  $("#gate").classList.remove("on");
+  $("#app").classList.add("ready");
+  render();
+}
+function signOut(msg){
+  S.session = null;
+  localStorage.removeItem(LS.session);
+  try{ speechSynthesis.cancel(); }catch(e){}
+  showGate(msg);
+}
+
+async function authPost(path, body){
+  const res = await fetch(WORKER_URL + path, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  let data = {};
+  try{ data = await res.json(); }catch(e){}
+  return { status: res.status, data };
+}
+
+let gateEmail = "";
+async function requestCode(){
+  const email = $("#gEmail").value.trim().toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){
+    gateNote("メールアドレスの形式が正しくないようです。", "err"); return;
+  }
+  const btn = $("#gSend");
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>';
+  try{
+    const { status, data } = await authPost("/auth/request-code", { email });
+    if (status === 429){
+      gateNote(`送信の間隔が短すぎます。${Math.ceil((data.retryAfterSec || 60) / 60)}分ほどおいてからお試しください。`, "err");
+      return;
+    }
+    if (data.error === "quota_exceeded"){
+      gateNote("本日のメール送信上限に達しました。時間をおいてお試しください。", "err"); return;
+    }
+    if (!data.ok){ gateNote("コードを送信できませんでした。通信環境をご確認ください。", "err"); return; }
+
+    /* 名簿にないアドレスでも同じ応答になる（登録済みかどうかを外から
+       調べられないようにするため）。届かない場合は名簿未登録の可能性がある。 */
+    gateEmail = email;
+    $("#gTo").textContent = email;
+    $("#gateEmail").hidden = true;
+    $("#gateCode").hidden = false;
+    $("#gCode").value = "";
+    gateNote("メールを送りました。届かない場合は迷惑メールフォルダと、名簿に登録済みかをご確認ください。", "ok");
+    setTimeout(() => $("#gCode").focus(), 60);
+  }catch(err){
+    gateNote(navigator.onLine ? "通信に失敗しました。" : "オフラインです。電波の届く場所でお試しください。", "err");
+  }finally{
+    btn.disabled = false; btn.textContent = "コードを送る";
+  }
+}
+
+async function verifyCode(){
+  const code = $("#gCode").value.replace(/\D/g, "");
+  if (code.length !== 6){ gateNote("6桁の数字を入力してください。", "err"); return; }
+  const btn = $("#gVerify");
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>';
+  try{
+    const { data } = await authPost("/auth/verify-code", { email: gateEmail, code });
+    if (!data.ok){
+      const left = data.attemptsLeft;
+      gateNote(left > 0
+        ? `コードが違います。あと${left}回まで入力できます。`
+        : "コードが無効になりました。もう一度送信してください。", "err");
+      if (left === 0){ $("#gateCode").hidden = true; $("#gateEmail").hidden = false; }
+      return;
+    }
+    S.session = { token: data.token, email: data.email, expiresAt: data.expiresAt };
+    localStorage.setItem(LS.session, JSON.stringify(S.session));
+    primeSpeech();          /* ログインのタップを音声合成の解錠に使う */
+    enterApp();
+    toast("ログインしました");
+  }catch(err){
+    gateNote("通信に失敗しました。もう一度お試しください。", "err");
+  }finally{
+    btn.disabled = false; btn.textContent = "ログイン";
+  }
+}
+
+$("#gSend").onclick   = requestCode;
+$("#gVerify").onclick = verifyCode;
+$("#gResend").onclick = () => { $("#gateCode").hidden = true; $("#gateEmail").hidden = false; requestCode(); };
+$("#gBack").onclick   = () => { $("#gateCode").hidden = true; $("#gateEmail").hidden = false; gateNote(""); };
+$("#gEmail").addEventListener("keydown", e => { if (e.key === "Enter") requestCode(); });
+$("#gCode").addEventListener("input", () => {
+  const v = $("#gCode").value.replace(/\D/g, "");
+  if (v !== $("#gCode").value) $("#gCode").value = v;
+  if (v.length === 6) verifyCode();      /* 6桁そろったら自動で送信 */
+});
+
+if (sessionValid()) enterApp(); else showGate();
 
 /* Service worker (オフライン動作) */
 if ("serviceWorker" in navigator){
