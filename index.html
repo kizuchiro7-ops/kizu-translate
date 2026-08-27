@@ -905,13 +905,35 @@ function primeSpeech(){
   if (speechPrimed || !("speechSynthesis" in window)) return;
   speechPrimed = true;
   try{
+    /* バックグラウンドにいる間に詰まったキューを流してから解錠する。
+       iOSは復帰直後 speaking が立ちっぱなしになり、以降の speak() を
+       黙って捨てることがある。 */
+    speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance(" ");
     u.volume = 0;
     speechSynthesis.speak(u);
   }catch(e){ /* 解錠できなくても手動の🔊は動くので黙って進む */ }
 }
-document.addEventListener("pointerdown", primeSpeech, { once: true });
-document.addEventListener("touchstart", primeSpeech, { once: true, passive: true });
+/* 解錠の待ち受けを張り直す。同じ関数参照なので重複登録にはならない。 */
+function armPriming(){
+  speechPrimed = false;
+  document.addEventListener("pointerdown", primeSpeech, { once: true });
+  document.addEventListener("touchstart", primeSpeech, { once: true, passive: true });
+}
+armPriming();
+
+/* iOSはアプリを長時間バックグラウンドに置くと音声合成の解錠を失う。
+   一度きりの解錠だと、翌朝アプリを開いたときに読み上げが無音のままになる
+   （実際に2日ぶりの起動で発生した）。復帰のたびに張り直す。 */
+function rearmOnResume(){
+  try{ speechSynthesis.cancel(); }catch(e){}
+  armPriming();
+}
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible") rearmOnResume();
+});
+window.addEventListener("pageshow", (e) => { if (e.persisted) rearmOnResume(); });
+window.addEventListener("focus", rearmOnResume);
 
 const MONTHS = ["January","February","March","April","May","June",
                 "July","August","September","October","November","December"];
@@ -1358,11 +1380,45 @@ function openListen(src){
 }
 function closeListen(){ $("#listen").classList.remove("on"); }
 
-let CONV = null;   /* 実行中の SpeechRecognition */
-function startConversation(src){
+let CONV = null;          /* 会話モードの SpeechRecognition */
+let REC  = null;          /* AI翻訳タブの小さいマイク */
+let convUserStopped = false;  /* ✕ や他画面からの中断か（=再試行しない） */
+
+/* 会話モードとAI翻訳タブのマイクは別インスタンス。片方が動いたまま
+   もう片方を start() すると例外になるので、起動前に必ず両方止める。 */
+function stopAllRecognition(){
+  convUserStopped = true;
+  for (const r of [CONV, REC]) { if (r) { try{ r.abort(); }catch(e){} } }
+  CONV = null; REC = null;
+  const m = $("#aiMic"); if (m) m.classList.remove("rec");
+}
+
+/* 何が起きたのかスタッフが判断できる文言にする。とくに network は
+   「電波を確認する」という具体的な行動につながるので分けて出す。 */
+function recErrorMessage(err){
+  switch (err){
+    case "not-allowed":
+    case "service-not-allowed":
+      return "マイクの使用が許可されていません。端末の設定でマイクを許可してください";
+    case "no-speech":
+      return "音声を検出できませんでした。もう一度お話しください";
+    case "audio-capture":
+      return "マイクが使えません。他のアプリが使用していないかご確認ください";
+    case "network":
+      return "通信が不安定です。電波を確認してもう一度お試しください";
+    case "aborted":
+      return "";                      /* こちらから止めた場合。黙る */
+    default:
+      return "音声入力に失敗しました。もう一度お試しください";
+  }
+}
+
+function startConversation(src, attempt){
+  attempt = attempt || 1;
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SR){ toast("この端末は音声入力に対応していません。キーボード入力をお使いください", 3000); return; }
-  if (CONV){ try{ CONV.abort(); }catch(e){} CONV = null; }
+  stopAllRecognition();
+  convUserStopped = false;
   primeSpeech();                     /* 訳文の自動読み上げのために解錠しておく */
   try{ speechSynthesis.cancel(); }catch(e){}
 
@@ -1385,10 +1441,21 @@ function startConversation(src){
     $("#listenHeard").textContent = finalText + interim;
   };
   rec.onerror = (e) => {
-    cancelled = true; CONV = null; closeListen();
-    toast(e.error === "not-allowed"
-      ? "マイクの使用が許可されていません。ブラウザの設定をご確認ください"
-      : (e.error === "no-speech" ? "音声を検出できませんでした" : "音声入力に失敗しました"), 3000);
+    cancelled = true; CONV = null;
+    if (convUserStopped){ convUserStopped = false; closeListen(); return; }
+
+    /* 端末を数日ぶりに開いた直後はWi-Fiの再接続中で、最初の1回だけ
+       network で落ちることがある。黙って1度だけ入れ直す。 */
+    const transient = (e.error === "network" || !e.error);
+    if (transient && attempt === 1 && $("#listen").classList.contains("on")){
+      $("#listenMain").textContent = src === "en" ? "Reconnecting…" : "接続し直しています…";
+      $("#listenSub").textContent = "";
+      setTimeout(() => startConversation(src, 2), 900);
+      return;
+    }
+    closeListen();
+    const msg = recErrorMessage(e.error);
+    if (msg) toast(msg, 3400);
   };
   rec.onend = async () => {
     CONV = null;
@@ -1413,22 +1480,33 @@ function startConversation(src){
   };
 
   try{ rec.start(); }
-  catch(e){ closeListen(); toast("音声入力を開始できませんでした", 2600); }
+  catch(e){
+    /* 直前の認識がまだ終了していないと例外になる。止めてから1度だけ入れ直す。 */
+    if (attempt === 1){
+      stopAllRecognition();
+      setTimeout(() => startConversation(src, 2), 500);
+      return;
+    }
+    closeListen();
+    toast("音声入力を開始できませんでした。少し待ってからお試しください", 2800);
+  }
 }
 function stopConversation(abort){
   if (!CONV) { closeListen(); return; }
+  if (abort) convUserStopped = true;
   try{ abort ? CONV.abort() : CONV.stop(); }catch(e){}
   if (abort){ CONV = null; closeListen(); }
 }
 $("#listenStop").onclick   = () => stopConversation(false);   /* ここまでを翻訳する */
 $("#listenCancel").onclick = () => stopConversation(true);    /* やめる */
 
-/* --- 音声入力 --- */
-let REC = null;
+/* --- 音声入力（AI翻訳タブの小さいマイク） --- */
 function micToggle(inp){
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SR){ toast("この端末は音声入力に対応していません", 2400); return; }
   if (REC){ REC.stop(); return; }
+  if (CONV) stopAllRecognition();      /* 会話モードが動いていると start() が失敗する */
+  primeSpeech();
   const rec = new SR();
   rec.lang = S.aiTo === "en" ? "ja-JP" : "en-US";   /* 入力言語 = 翻訳元 */
   rec.interimResults = true;
@@ -1443,9 +1521,16 @@ function micToggle(inp){
     }
     inp.value = finalText + interim;
   };
-  rec.onerror = (e) => { toast(e.error === "not-allowed" ? "マイクの使用が許可されていません" : "音声入力に失敗しました", 2400); };
+  rec.onerror = (e) => {
+    const msg = recErrorMessage(e.error);
+    if (msg) toast(msg, 3000);
+  };
   rec.onend = () => { REC = null; $("#aiMic") && $("#aiMic").classList.remove("rec"); if (inp.value.trim()) doTranslate(inp.value); };
-  try{ rec.start(); }catch(e){ toast("音声入力を開始できませんでした"); }
+  try{ rec.start(); }
+  catch(e){
+    stopAllRecognition();
+    toast("音声入力を開始できませんでした。少し待ってからお試しください", 2800);
+  }
 }
 
 /* =====================================================================
